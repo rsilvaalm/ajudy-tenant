@@ -160,10 +160,13 @@
                                 <i class="mdi mdi-account-circle text-muted fs-16 align-middle me-1"></i>
                                 Perfil
                             </a>
-                            <a class="dropdown-item" href="#">
-                                <i class="mdi mdi-lock text-muted fs-16 align-middle me-1"></i>
-                                Bloquear tela
-                            </a>
+                            <form method="POST" action="{{ route('lock.activate') }}">
+                                @csrf
+                                <button type="submit" class="dropdown-item w-100 text-start">
+                                    <i class="mdi mdi-lock text-muted fs-16 align-middle me-1"></i>
+                                    Bloquear tela
+                                </button>
+                            </form>
                             <div class="dropdown-divider"></div>
                             <form method="POST" action="{{ route('logout') }}">
                                 @csrf
