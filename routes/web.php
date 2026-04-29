@@ -1,15 +1,24 @@
 <?php
 
+use App\Http\Controllers\Auth\AuthenticatedSessionController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Middleware\InitializeTenancy;
 use Illuminate\Support\Facades\Route;
 
-Route::view('/', 'welcome');
+// Todas as rotas passam pelo middleware de tenancy
+Route::middleware(InitializeTenancy::class)->group(function () {
 
-Route::view('dashboard', 'dashboard')
-    ->middleware(['auth', 'verified'])
-    ->name('dashboard');
+    // ── Autenticação ──────────────────────────────────────────────────────────
+    Route::middleware('guest')->group(function () {
+        Route::get('login',  [AuthenticatedSessionController::class, 'create'])->name('login');
+        Route::post('login', [AuthenticatedSessionController::class, 'store'])->name('login.store');
+    });
 
-Route::view('profile', 'profile')
-    ->middleware(['auth'])
-    ->name('profile');
+    Route::middleware('auth')->group(function () {
+        Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
 
-require __DIR__.'/auth.php';
+        // ── Dashboard ─────────────────────────────────────────────────────────
+        Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+    });
+
+});
