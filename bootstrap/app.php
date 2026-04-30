@@ -4,6 +4,9 @@ use App\Http\Middleware\InitializeTenancy;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use App\Http\Middleware\HandleLockScreen;
+use App\Http\Middleware\CheckModuleAccess;
+
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -11,9 +14,14 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__ . '/../routes/console.php',
         health: '/up',
     )
+    ->withProviders([
+        App\Providers\ViewServiceProvider::class,
+    ])
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->alias([
-            'tenancy' => InitializeTenancy::class,
+            'tenancy'       => InitializeTenancy::class,
+            'lock'          => HandleLockScreen::class,
+            'module.access' => CheckModuleAccess::class,
         ]);
 
         // Garante que InitializeTenancy rode ANTES do Authenticate (auth)

@@ -51,7 +51,7 @@
         /* Lado esquerdo — degradê com logo da Ajudy */
         .auth-left {
             width: 42%;
-            background: linear-gradient(160deg, var(--brand-secondary) 0%, var(--brand-primary) 100%);
+            background: var(--brand-primary);
             display: flex;
             flex-direction: column;
             align-items: center;

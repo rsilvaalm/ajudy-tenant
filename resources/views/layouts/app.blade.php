@@ -16,11 +16,9 @@
         $primary         = $customization->color_primary   ?? ($currentTenant->color_primary   ?? '#1a3c5e');
         $secondary       = $customization->color_secondary ?? ($currentTenant->color_secondary ?? '#c8a84b');
         $tertiary        = $customization->color_tertiary  ?? ($currentTenant->color_tertiary  ?? '#f5f5f5');
-        // Tenant: logo 2 (modo claro) e logo 3 (modo escuro) — no topbar
-        $logoTenantLight = $customization->logo_vertical ?? null;
-        $logoTenantDark  = $customization->logo_negative  ?? $logoTenantLight;
+        $logoTenantLight = $customization->logo_negative   ?? null;
+        $logoTenantDark  = $customization->logo_vertical   ?? $null;
 
-        // Perfil do usuário logado
         $userProfile = \Illuminate\Support\Facades\DB::table('profile_user')
             ->join('profiles', 'profiles.id', '=', 'profile_user.profile_id')
             ->where('profile_user.user_id', auth()->id())
@@ -43,11 +41,17 @@
         .table-responsive { overflow: visible !important; }
         .card { overflow: visible !important; }
 
-        /* Logos dinâmicas por modo — afeta apenas o topbar do tenant */
+        /* Logos dinâmicas por modo */
         .logo-tenant-light { display: block; }
         .logo-tenant-dark  { display: none; }
         [data-bs-theme="dark"] .logo-tenant-light { display: none; }
         [data-bs-theme="dark"] .logo-tenant-dark  { display: block; }
+        [data-sidebar-size="sm"] .collapse.show {
+            display: none !important;
+        }
+        [data-sidebar-size="sm"] .nav-sm {
+            display: none !important;
+        }
     </style>
 </head>
 <body>
@@ -60,7 +64,7 @@
             <div class="navbar-header">
                 <div class="d-flex align-items-center">
 
-                    {{-- Logo horizontal collapsed (usa logo tenant) --}}
+                    {{-- Logo horizontal collapsed --}}
                     <div class="navbar-brand-box horizontal-logo">
                         <a href="{{ route('dashboard') }}" class="logo">
                             <span class="logo-lg">
@@ -75,7 +79,7 @@
                                          alt="{{ $currentTenant->name ?? '' }}">
                                 @else
                                     <img src="{{ asset('assets/images/ajudy/logo-vertical-negativa.png') }}"
-                                         height="40" alt="Ajudy">
+                                         height="28" alt="Ajudy">
                                 @endif
                             </span>
                             <span class="logo-sm">
@@ -93,17 +97,17 @@
                         </span>
                     </button>
 
-                    {{-- Logo do tenant à frente do hamburguer no topbar --}}
+                    {{-- Logo do tenant no topbar --}}
                     <a href="{{ route('dashboard') }}" class="d-flex align-items-center ms-2">
                         @if($logoTenantLight)
-                            <img src="{{ $logoTenantDark }}" 
-                                class="logo-tenant-light"
-                                style="height:56px;width:auto;object-fit:contain;max-width:220px;"
-                                alt="{{ $currentTenant->name ?? '' }}">
                             <img src="{{ $logoTenantLight }}"
-                                class="logo-tenant-dark"
-                                style="height:56px;width:auto;object-fit:contain;max-width:220px;"
-                                alt="{{ $currentTenant->name ?? '' }}">
+                                 class="logo-tenant-light"
+                                 style="height:56px;width:auto;object-fit:contain;max-width:220px;"
+                                 alt="{{ $currentTenant->name ?? '' }}">
+                            <img src="{{ $logoTenantDark }}"
+                                 class="logo-tenant-dark"
+                                 style="height:56px;width:auto;object-fit:contain;max-width:220px;"
+                                 alt="{{ $currentTenant->name ?? '' }}">
                         @else
                             <span class="fw-semibold text-muted fs-14">
                                 {{ $currentTenant->name ?? '' }}
@@ -130,6 +134,9 @@
                     </button>
 
                     {{-- Perfil --}}
+                    @php
+                        $authUser = DB::table('users')->where('id', auth()->id())->first();
+                    @endphp
                     <div class="dropdown ms-sm-3 header-item topbar-user">
                         <button type="button" class="btn"
                                 id="page-header-user-dropdown"
@@ -137,10 +144,16 @@
                                 aria-haspopup="true"
                                 aria-expanded="false">
                             <span class="d-flex align-items-center">
-                                <span class="rounded-circle header-profile-user bg-primary d-flex align-items-center justify-content-center text-white fw-bold"
-                                      style="width:36px;height:36px;font-size:15px;flex-shrink:0;">
-                                    {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
-                                </span>
+                                @if($authUser->avatar)
+                                    <img src="{{ asset($authUser->avatar) }}"
+                                        class="rounded-circle header-profile-user"
+                                        style="width:36px;height:36px;object-fit:cover;flex-shrink:0;">
+                                @else
+                                    <span class="rounded-circle header-profile-user bg-primary d-flex align-items-center justify-content-center text-white fw-bold"
+                                        style="width:36px;height:36px;font-size:15px;flex-shrink:0;">
+                                        {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
+                                    </span>
+                                @endif
                                 <span class="text-start ms-xl-2">
                                     <span class="d-none d-xl-inline-block ms-1 fw-medium user-name-text">
                                         {{ auth()->user()->name }}
@@ -156,7 +169,7 @@
                                 Olá, {{ explode(' ', auth()->user()->name)[0] }}!
                             </h6>
                             <div class="dropdown-divider"></div>
-                            <a class="dropdown-item" href="#">
+                            <a class="dropdown-item" href="{{ route('perfil.show') }}">
                                 <i class="mdi mdi-account-circle text-muted fs-16 align-middle me-1"></i>
                                 Perfil
                             </a>
@@ -170,7 +183,7 @@
                             <div class="dropdown-divider"></div>
                             <form method="POST" action="{{ route('logout') }}">
                                 @csrf
-                                <button type="submit" class="dropdown-item text-danger">
+                                <button type="submit" class="dropdown-item text-danger w-100 text-start">
                                     <i class="mdi mdi-logout fs-16 align-middle me-1"></i>
                                     Sair
                                 </button>
@@ -194,7 +207,7 @@
                 </span>
                 <span class="logo-lg">
                     <img src="{{ asset('assets/images/ajudy/logo-vertical-negativa.png') }}"
-                         height="40" alt="Ajudy">
+                         height="28" alt="Ajudy">
                 </span>
             </a>
             <a href="{{ route('dashboard') }}" class="logo logo-light">
@@ -203,7 +216,7 @@
                 </span>
                 <span class="logo-lg">
                     <img src="{{ asset('assets/images/ajudy/logo-vertical-negativa.png') }}"
-                         height="40" alt="Ajudy">
+                         height="28" alt="Ajudy">
                 </span>
             </a>
 
@@ -229,7 +242,7 @@
                         </a>
                     </li>
 
-                    {{-- Módulos liberados para este tenant --}}
+                    {{-- Módulos do tenant --}}
                     @php
                         $tenantModules = \Illuminate\Support\Facades\DB::table('modules')
                             ->where('is_active', true)
@@ -242,11 +255,41 @@
 
                     @foreach($tenantModules as $module)
                     <li class="nav-item">
-                        <a href="{{ isset($module->route_prefix) ? url($module->route_prefix) : '#' }}"
-                           class="nav-link menu-link {{ request()->is(($module->route_prefix ?? '__') . '*') ? 'active' : '' }}">
-                            <i class="{{ $module->icon ?? 'ri-apps-line' }}"></i>
-                            <span>{{ $module->name }}</span>
-                        </a>
+                        @if($module->slug === 'gestao-de-usuarios')
+                            {{-- Submenu Gestão de Usuários --}}
+                            <a href="#sidebarUsuarios"
+                               class="nav-link menu-link {{ request()->is('usuarios*') || request()->is('perfis*') ? '' : 'collapsed' }}"
+                               data-bs-toggle="collapse"
+                               role="button"
+                               aria-expanded="{{ request()->is('usuarios*') || request()->is('perfis*') ? 'true' : 'false' }}">
+                                <i class="{{ $module->icon ?? 'ri-user-settings-line' }}"></i>
+                                <span>{{ $module->name }}</span>
+                            </a>
+                            <div class="collapse {{ request()->is('usuarios*') || request()->is('perfis*') ? 'show' : '' }}"
+                                 id="sidebarUsuarios">
+                                <ul class="nav nav-sm flex-column">
+                                    <li class="nav-item">
+                                        <a href="{{ route('usuarios.index') }}"
+                                           class="nav-link {{ request()->routeIs('usuarios.*') ? 'active' : '' }}">
+                                            <i class="ri-user-line me-1"></i> Usuários
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a href="{{ route('perfis.index') }}"
+                                           class="nav-link {{ request()->routeIs('perfis.*') ? 'active' : '' }}">
+                                            <i class="ri-shield-user-line me-1"></i> Perfis
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        @else
+                            {{-- Link direto para outros módulos --}}
+                            <a href="{{ isset($module->route_prefix) ? url($module->route_prefix) : '#' }}"
+                               class="nav-link menu-link {{ request()->is(($module->route_prefix ?? '__') . '*') ? 'active' : '' }}">
+                                <i class="{{ $module->icon ?? 'ri-apps-line' }}"></i>
+                                <span>{{ $module->name }}</span>
+                            </a>
+                        @endif
                     </li>
                     @endforeach
                     @endif
@@ -290,6 +333,30 @@
                 </div>
             </div>
         </footer>
+    </div>
+
+    {{-- ── Modal de confirmação de exclusão ────────────────────────────── --}}
+    <div class="modal fade" id="deleteModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content">
+                <div class="modal-header border-0 pb-0">
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center pb-2">
+                    <div class="avatar-md mx-auto mb-3">
+                        <div class="avatar-title bg-danger-subtle text-danger rounded-circle fs-36">
+                            <i class="ri-delete-bin-line"></i>
+                        </div>
+                    </div>
+                    <h5 class="mb-1">Confirmar exclusão</h5>
+                    <p class="text-muted mb-0" id="deleteModalMessage"></p>
+                </div>
+                <div class="modal-footer border-0 pt-0 justify-content-center gap-2">
+                    <button class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+                    <button class="btn btn-danger" id="deleteModalConfirm">Sim, remover</button>
+                </div>
+            </div>
+        </div>
     </div>
 
 </div>
@@ -371,6 +438,26 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    // ── Modal de exclusão ─────────────────────────────────────────────────
+    let deleteAction = null;
+
+    window.confirmDelete = function (action, message) {
+        deleteAction = action;
+        document.getElementById('deleteModalMessage').textContent = message || 'Esta ação não pode ser desfeita.';
+        new bootstrap.Modal(document.getElementById('deleteModal')).show();
+    };
+
+    document.getElementById('deleteModalConfirm').addEventListener('click', function () {
+        if (!deleteAction) return;
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = deleteAction;
+        form.innerHTML = '<input type="hidden" name="_token" value="{{ csrf_token() }}">'
+                       + '<input type="hidden" name="_method" value="DELETE">';
+        document.body.appendChild(form);
+        form.submit();
+    });
+
 });
 
 // ── Toast global ──────────────────────────────────────────────────────────
@@ -397,13 +484,13 @@ function showToast(type, message) {
 }
 
 @if(session('success'))
-    showToast('success', '{{ session('success') }}');
+    showToast('success', '{{ addslashes(session('success')) }}');
 @endif
 @if(session('error'))
-    showToast('error', '{{ session('error') }}');
+    showToast('error', '{{ addslashes(session('error')) }}');
 @endif
 @if(session('warning'))
-    showToast('warning', '{{ session('warning') }}');
+    showToast('warning', '{{ addslashes(session('warning')) }}');
 @endif
 </script>
 
