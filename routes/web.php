@@ -3,6 +3,8 @@
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\LockScreenController;
 use App\Http\Controllers\Auth\SetPasswordController;
+use App\Http\Controllers\ClientController;
+use App\Http\Controllers\CustomFieldController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProfileUserController;
@@ -40,15 +42,14 @@ Route::middleware(['web', InitializeTenancy::class])->group(function () {
             Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 
             // ── Perfil do usuário logado ───────────────────────────────────
-            Route::get('perfil',           [ProfileUserController::class, 'show'])->name('perfil.show');
-            Route::put('perfil',           [ProfileUserController::class, 'update'])->name('perfil.update');
-            Route::patch('perfil/senha',   [ProfileUserController::class, 'updatePassword'])->name('perfil.password');
+            Route::get('perfil',         [ProfileUserController::class, 'show'])->name('perfil.show');
+            Route::put('perfil',         [ProfileUserController::class, 'update'])->name('perfil.update');
+            Route::patch('perfil/senha', [ProfileUserController::class, 'updatePassword'])->name('perfil.password');
 
             // ── Gestão de Usuários ─────────────────────────────────────────
             Route::middleware(CheckModuleAccess::class . ':gestao-de-usuarios')
                 ->group(function () {
 
-                // Perfis
                 Route::get('perfis',             [ProfileController::class, 'index'])->name('perfis.index');
                 Route::get('perfis/criar',       [ProfileController::class, 'create'])->name('perfis.create');
                 Route::post('perfis',            [ProfileController::class, 'store'])->name('perfis.store');
@@ -56,7 +57,6 @@ Route::middleware(['web', InitializeTenancy::class])->group(function () {
                 Route::put('perfis/{id}',        [ProfileController::class, 'update'])->name('perfis.update');
                 Route::delete('perfis/{id}',     [ProfileController::class, 'destroy'])->name('perfis.destroy');
 
-                // Usuários
                 Route::get('usuarios',               [UserController::class, 'index'])->name('usuarios.index');
                 Route::get('usuarios/criar',         [UserController::class, 'create'])->name('usuarios.create');
                 Route::post('usuarios',              [UserController::class, 'store'])->name('usuarios.store');
@@ -64,7 +64,27 @@ Route::middleware(['web', InitializeTenancy::class])->group(function () {
                 Route::put('usuarios/{id}',          [UserController::class, 'update'])->name('usuarios.update');
                 Route::delete('usuarios/{id}',       [UserController::class, 'destroy'])->name('usuarios.destroy');
                 Route::patch('usuarios/{id}/toggle', [UserController::class, 'toggleActive'])->name('usuarios.toggle');
+            });
 
+            // ── Clientes ───────────────────────────────────────────────────
+            Route::middleware(CheckModuleAccess::class . ':clientes')
+                ->group(function () {
+
+                // Campos personalizados (antes das rotas com parâmetro)
+                Route::get('clientes/campos',              [CustomFieldController::class, 'index'])->name('clientes.campos.index');
+                Route::post('clientes/campos',             [CustomFieldController::class, 'store'])->name('clientes.campos.store');
+                Route::put('clientes/campos/{id}',         [CustomFieldController::class, 'update'])->name('clientes.campos.update');
+                Route::patch('clientes/campos/{id}/toggle',[CustomFieldController::class, 'toggleActive'])->name('clientes.campos.toggle');
+                Route::delete('clientes/campos/{id}',      [CustomFieldController::class, 'destroy'])->name('clientes.campos.destroy');
+
+                // CRUD de clientes
+                Route::get('clientes',             [ClientController::class, 'index'])->name('clientes.index');
+                Route::get('clientes/novo',        [ClientController::class, 'create'])->name('clientes.create');
+                Route::post('clientes',            [ClientController::class, 'store'])->name('clientes.store');
+                Route::get('clientes/{client}',    [ClientController::class, 'show'])->name('clientes.show');
+                Route::get('clientes/{client}/editar', [ClientController::class, 'edit'])->name('clientes.edit');
+                Route::put('clientes/{client}',    [ClientController::class, 'update'])->name('clientes.update');
+                Route::delete('clientes/{client}', [ClientController::class, 'destroy'])->name('clientes.destroy');
             });
 
         });

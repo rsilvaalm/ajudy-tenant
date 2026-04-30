@@ -16,10 +16,10 @@
         $primary         = $customization->color_primary   ?? ($currentTenant->color_primary   ?? '#1a3c5e');
         $secondary       = $customization->color_secondary ?? ($currentTenant->color_secondary ?? '#c8a84b');
         $tertiary        = $customization->color_tertiary  ?? ($currentTenant->color_tertiary  ?? '#f5f5f5');
-        $logoTenantLight = $customization->logo_negative   ?? null;
-        $logoTenantDark  = $customization->logo_vertical   ?? $null;
-
-        $userProfile = \Illuminate\Support\Facades\DB::table('profile_user')
+        $logoTenantLight = $customization->logo_vertical   ?? null;
+        $logoTenantDark  = $customization->logo_negative   ?? $logoTenantLight;
+        $authUser        = \Illuminate\Support\Facades\DB::table('users')->where('id', auth()->id())->first();
+        $userProfile     = \Illuminate\Support\Facades\DB::table('profile_user')
             ->join('profiles', 'profiles.id', '=', 'profile_user.profile_id')
             ->where('profile_user.user_id', auth()->id())
             ->value('profiles.name');
@@ -40,18 +40,12 @@
         .navbar-nav .nav-link.active { background-color: rgba(255,255,255,0.12) !important; }
         .table-responsive { overflow: visible !important; }
         .card { overflow: visible !important; }
-
-        /* Logos dinâmicas por modo */
         .logo-tenant-light { display: block; }
         .logo-tenant-dark  { display: none; }
         [data-bs-theme="dark"] .logo-tenant-light { display: none; }
         [data-bs-theme="dark"] .logo-tenant-dark  { display: block; }
-        [data-sidebar-size="sm"] .collapse.show {
-            display: none !important;
-        }
-        [data-sidebar-size="sm"] .nav-sm {
-            display: none !important;
-        }
+        [data-sidebar-size="sm"] .collapse.show { display: none !important; }
+        [data-sidebar-size="sm"] .nav-sm        { display: none !important; }
     </style>
 </head>
 <body>
@@ -64,22 +58,16 @@
             <div class="navbar-header">
                 <div class="d-flex align-items-center">
 
-                    {{-- Logo horizontal collapsed --}}
                     <div class="navbar-brand-box horizontal-logo">
                         <a href="{{ route('dashboard') }}" class="logo">
                             <span class="logo-lg">
                                 @if($logoTenantLight)
-                                    <img src="{{ $logoTenantLight }}" height="32"
-                                         class="logo-tenant-light"
-                                         style="object-fit:contain;max-width:140px;"
-                                         alt="{{ $currentTenant->name ?? '' }}">
-                                    <img src="{{ $logoTenantDark }}" height="32"
-                                         class="logo-tenant-dark"
-                                         style="object-fit:contain;max-width:140px;"
-                                         alt="{{ $currentTenant->name ?? '' }}">
+                                    <img src="{{ $logoTenantLight }}" height="32" class="logo-tenant-light"
+                                         style="object-fit:contain;max-width:140px;" alt="{{ $currentTenant->name ?? '' }}">
+                                    <img src="{{ $logoTenantDark }}" height="32" class="logo-tenant-dark"
+                                         style="object-fit:contain;max-width:140px;" alt="{{ $currentTenant->name ?? '' }}">
                                 @else
-                                    <img src="{{ asset('assets/images/ajudy/logo-vertical-negativa.png') }}"
-                                         height="28" alt="Ajudy">
+                                    <img src="{{ asset('assets/images/ajudy/logo-vertical-negativa.png') }}" height="28" alt="Ajudy">
                                 @endif
                             </span>
                             <span class="logo-sm">
@@ -88,30 +76,22 @@
                         </a>
                     </div>
 
-                    {{-- Hamburguer --}}
                     <button type="button"
                             class="btn btn-sm px-3 fs-16 header-item vertical-menu-btn topnav-hamburger"
                             id="topnav-hamburger-icon">
-                        <span class="hamburger-icon">
-                            <span></span><span></span><span></span>
-                        </span>
+                        <span class="hamburger-icon"><span></span><span></span><span></span></span>
                     </button>
 
-                    {{-- Logo do tenant no topbar --}}
                     <a href="{{ route('dashboard') }}" class="d-flex align-items-center ms-2">
                         @if($logoTenantLight)
-                            <img src="{{ $logoTenantLight }}"
-                                 class="logo-tenant-light"
+                            <img src="{{ $logoTenantLight }}" class="logo-tenant-light"
                                  style="height:56px;width:auto;object-fit:contain;max-width:220px;"
                                  alt="{{ $currentTenant->name ?? '' }}">
-                            <img src="{{ $logoTenantDark }}"
-                                 class="logo-tenant-dark"
+                            <img src="{{ $logoTenantDark }}" class="logo-tenant-dark"
                                  style="height:56px;width:auto;object-fit:contain;max-width:220px;"
                                  alt="{{ $currentTenant->name ?? '' }}">
                         @else
-                            <span class="fw-semibold text-muted fs-14">
-                                {{ $currentTenant->name ?? '' }}
-                            </span>
+                            <span class="fw-semibold text-muted fs-14">{{ $currentTenant->name ?? '' }}</span>
                         @endif
                     </a>
 
@@ -119,38 +99,27 @@
 
                 <div class="d-flex align-items-center gap-1">
 
-                    {{-- Fullscreen --}}
-                    <button type="button"
-                            class="btn btn-icon btn-topbar btn-ghost-secondary rounded-circle"
+                    <button type="button" class="btn btn-icon btn-topbar btn-ghost-secondary rounded-circle"
                             id="btn-fullscreen" title="Tela cheia">
                         <i class="bx bx-fullscreen fs-22" id="fullscreen-icon"></i>
                     </button>
 
-                    {{-- Modo noturno --}}
-                    <button type="button"
-                            class="btn btn-icon btn-topbar btn-ghost-secondary rounded-circle"
+                    <button type="button" class="btn btn-icon btn-topbar btn-ghost-secondary rounded-circle"
                             id="btn-dark-mode" title="Modo noturno">
                         <i class="bx bx-moon fs-22" id="dark-mode-icon"></i>
                     </button>
 
-                    {{-- Perfil --}}
-                    @php
-                        $authUser = DB::table('users')->where('id', auth()->id())->first();
-                    @endphp
                     <div class="dropdown ms-sm-3 header-item topbar-user">
-                        <button type="button" class="btn"
-                                id="page-header-user-dropdown"
-                                data-bs-toggle="dropdown"
-                                aria-haspopup="true"
-                                aria-expanded="false">
+                        <button type="button" class="btn" id="page-header-user-dropdown"
+                                data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                             <span class="d-flex align-items-center">
                                 @if($authUser->avatar)
                                     <img src="{{ asset($authUser->avatar) }}"
-                                        class="rounded-circle header-profile-user"
-                                        style="width:36px;height:36px;object-fit:cover;flex-shrink:0;">
+                                         class="rounded-circle header-profile-user"
+                                         style="width:36px;height:36px;object-fit:cover;flex-shrink:0;">
                                 @else
                                     <span class="rounded-circle header-profile-user bg-primary d-flex align-items-center justify-content-center text-white fw-bold"
-                                        style="width:36px;height:36px;font-size:15px;flex-shrink:0;">
+                                          style="width:36px;height:36px;font-size:15px;flex-shrink:0;">
                                         {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
                                     </span>
                                 @endif
@@ -165,27 +134,22 @@
                             </span>
                         </button>
                         <div class="dropdown-menu dropdown-menu-end">
-                            <h6 class="dropdown-header">
-                                Olá, {{ explode(' ', auth()->user()->name)[0] }}!
-                            </h6>
+                            <h6 class="dropdown-header">Olá, {{ explode(' ', auth()->user()->name)[0] }}!</h6>
                             <div class="dropdown-divider"></div>
                             <a class="dropdown-item" href="{{ route('perfil.show') }}">
-                                <i class="mdi mdi-account-circle text-muted fs-16 align-middle me-1"></i>
-                                Perfil
+                                <i class="mdi mdi-account-circle text-muted fs-16 align-middle me-1"></i> Perfil
                             </a>
                             <form method="POST" action="{{ route('lock.activate') }}">
                                 @csrf
                                 <button type="submit" class="dropdown-item w-100 text-start">
-                                    <i class="mdi mdi-lock text-muted fs-16 align-middle me-1"></i>
-                                    Bloquear tela
+                                    <i class="mdi mdi-lock text-muted fs-16 align-middle me-1"></i> Bloquear tela
                                 </button>
                             </form>
                             <div class="dropdown-divider"></div>
                             <form method="POST" action="{{ route('logout') }}">
                                 @csrf
                                 <button type="submit" class="dropdown-item text-danger w-100 text-start">
-                                    <i class="mdi mdi-logout fs-16 align-middle me-1"></i>
-                                    Sair
+                                    <i class="mdi mdi-logout fs-16 align-middle me-1"></i> Sair
                                 </button>
                             </form>
                         </div>
@@ -199,30 +163,15 @@
     {{-- ── SIDEBAR ──────────────────────────────────────────────────────── --}}
     <div class="app-menu navbar-menu">
         <div class="navbar-brand-box">
-
-            {{-- Logo Ajudy sempre negativa na sidebar --}}
             <a href="{{ route('dashboard') }}" class="logo logo-dark">
-                <span class="logo-sm">
-                    <img src="{{ asset('assets/images/ajudy/logo-sm.png') }}" height="22">
-                </span>
-                <span class="logo-lg">
-                    <img src="{{ asset('assets/images/ajudy/logo-vertical-negativa.png') }}"
-                         height="28" alt="Ajudy">
-                </span>
+                <span class="logo-sm"><img src="{{ asset('assets/images/ajudy/logo-sm.png') }}" height="22"></span>
+                <span class="logo-lg"><img src="{{ asset('assets/images/ajudy/logo-vertical-negativa.png') }}" height="28" alt="Ajudy"></span>
             </a>
             <a href="{{ route('dashboard') }}" class="logo logo-light">
-                <span class="logo-sm">
-                    <img src="{{ asset('assets/images/ajudy/logo-sm.png') }}" height="22">
-                </span>
-                <span class="logo-lg">
-                    <img src="{{ asset('assets/images/ajudy/logo-vertical-negativa.png') }}"
-                         height="28" alt="Ajudy">
-                </span>
+                <span class="logo-sm"><img src="{{ asset('assets/images/ajudy/logo-sm.png') }}" height="22"></span>
+                <span class="logo-lg"><img src="{{ asset('assets/images/ajudy/logo-vertical-negativa.png') }}" height="28" alt="Ajudy"></span>
             </a>
-
-            <button type="button"
-                    class="btn btn-sm p-0 fs-20 header-item float-end btn-vertical-sm-hover"
-                    id="vertical-hover">
+            <button type="button" class="btn btn-sm p-0 fs-20 header-item float-end btn-vertical-sm-hover" id="vertical-hover">
                 <i class="ri-record-circle-line"></i>
             </button>
         </div>
@@ -233,7 +182,6 @@
 
                     <li class="menu-title"><span>Menu</span></li>
 
-                    {{-- Dashboard sempre visível --}}
                     <li class="nav-item">
                         <a href="{{ route('dashboard') }}"
                            class="nav-link menu-link {{ request()->routeIs('dashboard') ? 'active' : '' }}">
@@ -242,12 +190,9 @@
                         </a>
                     </li>
 
-                    {{-- Módulos do tenant --}}
                     @php
                         $tenantModules = \Illuminate\Support\Facades\DB::table('modules')
-                            ->where('is_active', true)
-                            ->orderBy('id')
-                            ->get();
+                            ->where('is_active', true)->orderBy('id')->get();
                     @endphp
 
                     @if($tenantModules->isNotEmpty())
@@ -255,41 +200,80 @@
 
                     @foreach($tenantModules as $module)
                     <li class="nav-item">
+
                         @if($module->slug === 'gestao-de-usuarios')
-                            {{-- Submenu Gestão de Usuários --}}
-                            <a href="#sidebarUsuarios"
-                               class="nav-link menu-link {{ request()->is('usuarios*') || request()->is('perfis*') ? '' : 'collapsed' }}"
-                               data-bs-toggle="collapse"
-                               role="button"
-                               aria-expanded="{{ request()->is('usuarios*') || request()->is('perfis*') ? 'true' : 'false' }}">
-                                <i class="{{ $module->icon ?? 'ri-user-settings-line' }}"></i>
-                                <span>{{ $module->name }}</span>
-                            </a>
-                            <div class="collapse {{ request()->is('usuarios*') || request()->is('perfis*') ? 'show' : '' }}"
-                                 id="sidebarUsuarios">
-                                <ul class="nav nav-sm flex-column">
-                                    <li class="nav-item">
-                                        <a href="{{ route('usuarios.index') }}"
-                                           class="nav-link {{ request()->routeIs('usuarios.*') ? 'active' : '' }}">
-                                            <i class="ri-user-line me-1"></i> Usuários
-                                        </a>
-                                    </li>
-                                    <li class="nav-item">
-                                        <a href="{{ route('perfis.index') }}"
-                                           class="nav-link {{ request()->routeIs('perfis.*') ? 'active' : '' }}">
-                                            <i class="ri-shield-user-line me-1"></i> Perfis
-                                        </a>
-                                    </li>
-                                </ul>
-                            </div>
+                        {{-- ── Gestão de Usuários ───────────────────────── --}}
+                        <a href="#sidebarUsuarios"
+                           class="nav-link menu-link {{ request()->is('usuarios*','perfis*') ? '' : 'collapsed' }}"
+                           data-bs-toggle="collapse" role="button"
+                           aria-expanded="{{ request()->is('usuarios*','perfis*') ? 'true' : 'false' }}">
+                            <i class="{{ $module->icon ?? 'ri-user-settings-line' }}"></i>
+                            <span>{{ $module->name }}</span>
+                        </a>
+                        <div class="collapse {{ request()->is('usuarios*','perfis*') ? 'show' : '' }}"
+                             id="sidebarUsuarios">
+                            <ul class="nav nav-sm flex-column">
+                                @if(Route::has('usuarios.index'))
+                                <li class="nav-item">
+                                    <a href="{{ route('usuarios.index') }}"
+                                       class="nav-link {{ request()->routeIs('usuarios.*') ? 'active' : '' }}">
+                                        <i class="ri-user-line me-1"></i> Usuários
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a href="{{ route('perfis.index') }}"
+                                       class="nav-link {{ request()->routeIs('perfis.*') ? 'active' : '' }}">
+                                        <i class="ri-shield-user-line me-1"></i> Perfis
+                                    </a>
+                                </li>
+                                @endif
+                            </ul>
+                        </div>
+
+                        @elseif($module->slug === 'clientes')
+                        {{-- ── Clientes ─────────────────────────────────── --}}
+                        <a href="#sidebarClientes"
+                           class="nav-link menu-link {{ request()->is('clientes*') ? '' : 'collapsed' }}"
+                           data-bs-toggle="collapse" role="button"
+                           aria-expanded="{{ request()->is('clientes*') ? 'true' : 'false' }}">
+                            <i class="{{ $module->icon ?? 'ri-user-smile-fill' }}"></i>
+                            <span>{{ $module->name }}</span>
+                        </a>
+                        <div class="collapse {{ request()->is('clientes*') ? 'show' : '' }}"
+                             id="sidebarClientes">
+                            <ul class="nav nav-sm flex-column">
+                                @if(Route::has('clientes.create'))
+                                <li class="nav-item">
+                                    <a href="{{ route('clientes.create') }}"
+                                       class="nav-link {{ request()->routeIs('clientes.create') ? 'active' : '' }}">
+                                        <i class="ri-user-add-line me-1"></i> Adicionar
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a href="{{ route('clientes.index') }}"
+                                       class="nav-link {{ request()->routeIs('clientes.index','clientes.show') ? 'active' : '' }}">
+                                        <i class="ri-search-line me-1"></i> Pesquisar
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a href="{{ route('clientes.campos.index') }}"
+                                       class="nav-link {{ request()->routeIs('clientes.campos.*') ? 'active' : '' }}">
+                                        <i class="ri-list-settings-line me-1"></i> Campos personalizados
+                                    </a>
+                                </li>
+                                @endif
+                            </ul>
+                        </div>
+
                         @else
-                            {{-- Link direto para outros módulos --}}
-                            <a href="{{ isset($module->route_prefix) ? url($module->route_prefix) : '#' }}"
-                               class="nav-link menu-link {{ request()->is(($module->route_prefix ?? '__') . '*') ? 'active' : '' }}">
-                                <i class="{{ $module->icon ?? 'ri-apps-line' }}"></i>
-                                <span>{{ $module->name }}</span>
-                            </a>
+                        {{-- ── Link direto ──────────────────────────────── --}}
+                        <a href="{{ isset($module->route_prefix) ? url($module->route_prefix) : '#' }}"
+                           class="nav-link menu-link {{ request()->is(($module->route_prefix ?? '__').'*') ? 'active' : '' }}">
+                            <i class="{{ $module->icon ?? 'ri-apps-line' }}"></i>
+                            <span>{{ $module->name }}</span>
+                        </a>
                         @endif
+
                     </li>
                     @endforeach
                     @endif
@@ -327,9 +311,7 @@
             <div class="container-fluid">
                 <div class="row">
                     <div class="col-sm-6">{{ date('Y') }} &copy; {{ $currentTenant->name ?? 'Ajudy' }}</div>
-                    <div class="col-sm-6 text-end">
-                        <small class="text-muted">Powered by Ajudy</small>
-                    </div>
+                    <div class="col-sm-6 text-end"><small class="text-muted">Powered by Ajudy</small></div>
                 </div>
             </div>
         </footer>
@@ -373,10 +355,9 @@
 <script>
 document.addEventListener('DOMContentLoaded', function () {
 
-    // ── Aplica modo salvo ao carregar ─────────────────────────────────────
+    // ── Modo salvo ────────────────────────────────────────────────────────
     const savedMode = localStorage.getItem('ajudy-color-mode') || 'light';
     const iconDark  = document.getElementById('dark-mode-icon');
-
     if (savedMode === 'dark') {
         document.documentElement.setAttribute('data-bs-theme', 'dark');
         iconDark?.classList.replace('bx-moon', 'bx-sun');
@@ -387,11 +368,8 @@ document.addEventListener('DOMContentLoaded', function () {
     if (hamburger) {
         hamburger.addEventListener('click', function () {
             if (window.innerWidth >= 1025) {
-                const current = document.documentElement.getAttribute('data-sidebar-size');
-                document.documentElement.setAttribute(
-                    'data-sidebar-size',
-                    current === 'sm' ? 'lg' : 'sm'
-                );
+                const cur = document.documentElement.getAttribute('data-sidebar-size');
+                document.documentElement.setAttribute('data-sidebar-size', cur === 'sm' ? 'lg' : 'sm');
             } else {
                 document.body.classList.toggle('vertical-sidebar-enable');
             }
@@ -401,7 +379,6 @@ document.addEventListener('DOMContentLoaded', function () {
     // ── Fullscreen ────────────────────────────────────────────────────────
     const btnFullscreen  = document.getElementById('btn-fullscreen');
     const iconFullscreen = document.getElementById('fullscreen-icon');
-
     if (btnFullscreen) {
         btnFullscreen.addEventListener('click', function () {
             if (!document.fullscreenElement) {
@@ -412,46 +389,35 @@ document.addEventListener('DOMContentLoaded', function () {
                 iconFullscreen.classList.replace('bx-exit-fullscreen', 'bx-fullscreen');
             }
         });
-
         document.addEventListener('fullscreenchange', function () {
-            if (!document.fullscreenElement) {
+            if (!document.fullscreenElement)
                 iconFullscreen.classList.replace('bx-exit-fullscreen', 'bx-fullscreen');
-            }
         });
     }
 
     // ── Modo noturno ──────────────────────────────────────────────────────
     const btnDark = document.getElementById('btn-dark-mode');
-
     if (btnDark) {
         btnDark.addEventListener('click', function () {
             const isDark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
-            if (isDark) {
-                document.documentElement.setAttribute('data-bs-theme', 'light');
-                iconDark.classList.replace('bx-sun', 'bx-moon');
-                localStorage.setItem('ajudy-color-mode', 'light');
-            } else {
-                document.documentElement.setAttribute('data-bs-theme', 'dark');
-                iconDark.classList.replace('bx-moon', 'bx-sun');
-                localStorage.setItem('ajudy-color-mode', 'dark');
-            }
+            document.documentElement.setAttribute('data-bs-theme', isDark ? 'light' : 'dark');
+            iconDark.classList.replace(isDark ? 'bx-sun' : 'bx-moon', isDark ? 'bx-moon' : 'bx-sun');
+            localStorage.setItem('ajudy-color-mode', isDark ? 'light' : 'dark');
         });
     }
 
     // ── Modal de exclusão ─────────────────────────────────────────────────
     let deleteAction = null;
-
     window.confirmDelete = function (action, message) {
         deleteAction = action;
         document.getElementById('deleteModalMessage').textContent = message || 'Esta ação não pode ser desfeita.';
         new bootstrap.Modal(document.getElementById('deleteModal')).show();
     };
-
     document.getElementById('deleteModalConfirm').addEventListener('click', function () {
         if (!deleteAction) return;
         const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = deleteAction;
+        form.method  = 'POST';
+        form.action  = deleteAction;
         form.innerHTML = '<input type="hidden" name="_token" value="{{ csrf_token() }}">'
                        + '<input type="hidden" name="_method" value="DELETE">';
         document.body.appendChild(form);
@@ -476,8 +442,7 @@ function showToast(type, message) {
                 <div class="toast-body d-flex align-items-center gap-2">
                     <i class="${c.icon} fs-16"></i><span>${message}</span>
                 </div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto"
-                        data-bs-dismiss="toast"></button>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
             </div>
         </div>`);
     setTimeout(() => document.getElementById(id)?.remove(), 4000);
