@@ -16,8 +16,8 @@
         $primary         = $customization->color_primary   ?? ($currentTenant->color_primary   ?? '#1a3c5e');
         $secondary       = $customization->color_secondary ?? ($currentTenant->color_secondary ?? '#c8a84b');
         $tertiary        = $customization->color_tertiary  ?? ($currentTenant->color_tertiary  ?? '#f5f5f5');
-        $logoTenantLight = $customization->logo_vertical   ?? null;
-        $logoTenantDark  = $customization->logo_negative   ?? $logoTenantLight;
+        $logoTenantLight = $customization->logo_negative   ?? null;
+        $logoTenantDark  = $customization->logo_vertical   ?? $null;
         $authUser        = \Illuminate\Support\Facades\DB::table('users')->where('id', auth()->id())->first();
         $userProfile     = \Illuminate\Support\Facades\DB::table('profile_user')
             ->join('profiles', 'profiles.id', '=', 'profile_user.profile_id')
@@ -285,7 +285,7 @@
 
     {{-- ── CONTEÚDO ─────────────────────────────────────────────────────── --}}
     <div class="main-content">
-        <div class="page-content">
+        <div class="page-content" style="margin-bottom 28px;">
             <div class="container-fluid">
 
                 @hasSection('page-title')
@@ -307,7 +307,7 @@
             </div>
         </div>
 
-        <footer class="footer">
+        <footer class="footer" style="margin-top 10px;">
             <div class="container-fluid">
                 <div class="row">
                     <div class="col-sm-6">{{ date('Y') }} &copy; {{ $currentTenant->name ?? 'Ajudy' }}</div>

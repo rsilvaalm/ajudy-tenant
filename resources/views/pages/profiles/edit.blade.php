@@ -58,11 +58,10 @@
                 </div>
             </div>
 
-            <div class="mt-4 d-flex gap-2">
+            <div class="mt-4 d-flex justify-content-end gap-2">
                 <button type="submit" class="btn btn-primary">
                     <i class="ri-save-line me-1"></i> Salvar alterações
                 </button>
-                <a href="{{ route('perfis.index') }}" class="btn btn-light">Cancelar</a>
             </div>
         </form>
     </div>
