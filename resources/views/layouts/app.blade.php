@@ -484,13 +484,13 @@ function showToast(type, message) {
 }
 
 @if(session('success'))
-    showToast('success', '{{ addslashes(session('success')) }}');
+    showToast('success', {!! json_encode(session('success')) !!});
 @endif
 @if(session('error'))
-    showToast('error', '{{ addslashes(session('error')) }}');
+    showToast('error', {!! json_encode(session('error')) !!});
 @endif
 @if(session('warning'))
-    showToast('warning', '{{ addslashes(session('warning')) }}');
+    showToast('warning', {!! json_encode(session('warning')) !!});
 @endif
 </script>
 
