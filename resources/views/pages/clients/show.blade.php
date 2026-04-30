@@ -31,24 +31,24 @@
                 <div class="p-3">
 
                     @if($client->marital_status)
-                    <div class="mb-3 pb-3 border-bottom">
+                    <div class="copyable mb-3 pb-3 border-bottom" data-value="{{ $maritalLabels[$client->marital_status] ?? '' }}">
                         <div class="d-flex align-items-center gap-2 mb-1">
                             <i class="ri-user-heart-line text-primary fs-16"></i>
                             <span class="fw-semibold fs-13">Estado civil</span>
                         </div>
-                        <div class="copyable text-muted fs-13 ps-4" data-value="{{ $client->marital_status }}">
+                        <div class="text-muted fs-13 ps-4">
                             {{ $maritalLabels[$client->marital_status] ?? '' }}
                         </div>
                     </div>
                     @endif
 
                     @if($client->nationality)
-                    <div class="mb-3 pb-3 border-bottom">
+                    <div class="copyable mb-3 pb-3 border-bottom" data-value="{{ $client->nationality }}">
                         <div class="d-flex align-items-center gap-2 mb-1">
                             <i class="ri-earth-fill text-primary fs-16"></i>
                             <span class="fw-semibold fs-13">Nacionalidade</span>
                         </div>
-                        <div class="copyable text-muted fs-13 ps-4" data-value="{{ $client->nationality }}">
+                        <div class="text-muted fs-13 ps-4">
                             {{ $client->nationality }}
                         </div>
                     </div>
@@ -74,41 +74,37 @@
                     @endif
 
                     @if($client->birth_date)
-                    <div class="mb-3 pb-3 border-bottom">
+                    <div class="copyable mb-3 pb-3 border-bottom" data-value="{{ \Carbon\Carbon::parse($client->birth_date)->format('d/m/Y') }}">
                         <div class="d-flex align-items-center gap-2 mb-1">
                             <i class="ri-cake-line text-primary fs-16"></i>
                             <span class="fw-semibold fs-13">Data de nascimento</span>
                         </div>
-                        <div class="copyable text-muted fs-13 ps-4"
-                             data-value="{{ \Carbon\Carbon::parse($client->birth_date)->format('d/m/Y') }}">
+                        <div class="text-muted fs-13 ps-4">
                             {{ \Carbon\Carbon::parse($client->birth_date)->format('d/m/Y') }}
-                        </div>                        
-                        <div class="copyable text-muted fs-13 ps-4"
-                             data-value="{{ \Carbon\Carbon::parse($client->birth_date)->format('d/m/Y') }}">
-                            @if($age) <span class="text-muted">{{ $age }} anos</span> @endif
+                            @if($age) <span class="text-muted">({{ $age }} anos)</span> @endif
                         </div>
                     </div>
                     @endif
 
                     @if($client->email)
-                    <div class="mb-3 pb-3 border-bottom">
+                    <div class="copyable mb-3 pb-3 border-bottom" data-value="{{ $client->email }}">
                         <div class="d-flex align-items-center gap-2 mb-1">
                             <i class="ri-mail-line text-primary fs-16"></i>
                             <span class="fw-semibold fs-13">E-mail</span>
                         </div>
-                        <div class="copyable text-muted fs-13 ps-4" data-value="{{ $client->email }}">
+                        <div class="text-muted fs-13 ps-4">
                             {{ $client->email }}
                         </div>
                     </div>
                     @endif
 
                     @if($client->profession)
-                    <div class="mb-3 pb-3 border-bottom">
+                    <div class="copyable mb-3 pb-3 border-bottom" data-value="{{ $client->profession }}">
                         <div class="d-flex align-items-center gap-2 mb-1">
                             <i class="ri-briefcase-line text-primary fs-16"></i>
                             <span class="fw-semibold fs-13">Profissão</span>
                         </div>
-                        <div class="copyable text-muted fs-13 ps-4" data-value="{{ $client->profession }}">
+                        <div class="text-muted fs-13 ps-4">
                             {{ $client->profession }}
                         </div>
                     </div>
@@ -154,11 +150,6 @@
                     @endif
 
                     @if($client->address_street)
-                    <div class="mb-3 {{ $customFields->whereNotNull('value')->isNotEmpty() ? 'pb-3 border-bottom' : '' }}">
-                        <div class="d-flex align-items-center gap-2 mb-1">
-                            <i class="ri-map-pin-line text-primary fs-16"></i>
-                            <span class="fw-semibold fs-13">Endereço</span>
-                        </div>
                         @php
                             $fullAddress = collect([
                                 $client->address_street,
@@ -168,7 +159,12 @@
                                 $client->address_zip ? 'CEP: '.$client->address_zip : null,
                             ])->filter()->implode(', ');
                         @endphp
-                        <div class="copyable text-muted fs-13 ps-4" data-value="{{ $fullAddress }}">
+                    <div class="copyable mb-3 {{ $customFields->whereNotNull('value')->isNotEmpty() ? 'pb-3 border-bottom' : '' }}" data-value="{{ $fullAddress }}">
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <i class="ri-map-pin-line text-primary fs-16"></i>
+                            <span class="fw-semibold fs-13">Endereço</span>
+                        </div>
+                        <div class="text-muted fs-13 ps-4">
                             {{ $fullAddress }}
                         </div>
                     </div>
@@ -176,12 +172,12 @@
 
                     {{-- Campos personalizados --}}
                     @foreach($customFields->whereNotNull('value') as $field)
-                    <div class="mb-3 {{ !$loop->last ? 'pb-3 border-bottom' : '' }}">
+                    <div class="copyable mb-3 {{ !$loop->last ? 'pb-3 border-bottom' : '' }}" data-value="{{ $field->value }}">
                         <div class="d-flex align-items-center gap-2 mb-1">
                             <i class="ri-list-check text-primary fs-16"></i>
                             <span class="fw-semibold fs-13">{{ $field->label }}</span>
                         </div>
-                        <div class="copyable text-muted fs-13 ps-4" data-value="{{ $field->value }}">
+                        <div class="text-muted fs-13 ps-4">
                             {{ $field->value }}
                         </div>
                     </div>
@@ -226,35 +222,90 @@
 </div>
 
 @push('scripts')
+<style>
+    .copyable {
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border-radius: 6px;
+    }
+    /* Estilo para quando a classe está no container principal (bloco inteiro) */
+    div.copyable.mb-3 {
+        padding: 8px;
+        margin: -8px -8px 0 !important;
+    }
+    /* Estilo para quando a classe está em elementos internos (listas) */
+    div.copyable:not(.mb-3) {
+        padding: 2px 8px;
+        margin: 0 -8px;
+    }
+    .copyable:hover {
+        background-color: rgba(64, 81, 137, 0.1);
+    }
+    .copyable:active {
+        background-color: rgba(64, 81, 137, 0.15);
+        transform: scale(0.99);
+    }
+</style>
 <script>
-document.querySelectorAll('.copyable').forEach(el => {
-    el.style.cursor = 'pointer';
-    el.title = 'Clique para copiar';
+document.addEventListener('DOMContentLoaded', function() {
+    const copyToClipboard = async (text) => {
+        try {
+            if (navigator.clipboard && window.isSecureContext) {
+                await navigator.clipboard.writeText(text);
+                return true;
+            } else {
+                throw new Error('Clipboard API unavailable or not secure context');
+            }
+        } catch (err) {
+            console.warn('Usando fallback para cópia:', err.message);
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            textArea.style.position = "fixed";
+            textArea.style.left = "-9999px";
+            textArea.style.top = "0";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            try {
+                const successful = document.execCommand('copy');
+                document.body.removeChild(textArea);
+                return successful;
+            } catch (fallbackErr) {
+                console.error('Fallback falhou:', fallbackErr);
+                document.body.removeChild(textArea);
+                return false;
+            }
+        }
+    };
 
-    el.addEventListener('mouseenter', function () {
-        this.style.opacity = '.7';
-    });
-    el.addEventListener('mouseleave', function () {
-        this.style.opacity = '1';
-    });
+    document.querySelectorAll('.copyable').forEach(el => {
+        el.title = 'Clique para copiar';
 
-    el.addEventListener('click', function () {
-        const value = this.getAttribute('data-value');
-        if (!value) return;
+        el.addEventListener('click', async function (e) {
+            e.stopPropagation();
+            const value = this.getAttribute('data-value');
+            
+            console.log('Tentando copiar:', value);
+            
+            if (!value) {
+                console.warn('Nenhum valor encontrado para copiar');
+                return;
+            }
 
-        navigator.clipboard.writeText(value).then(() => {
-            showToast('info', '<i class="ri-clipboard-line me-1"></i> Copiado: ' + value);
-        }).catch(() => {
-            // Fallback para navegadores sem clipboard API
-            const ta = document.createElement('textarea');
-            ta.value = value;
-            ta.style.position = 'fixed';
-            ta.style.opacity = '0';
-            document.body.appendChild(ta);
-            ta.select();
-            document.execCommand('copy');
-            document.body.removeChild(ta);
-            showToast('info', 'Copiado: ' + value);
+            const success = await copyToClipboard(value);
+            
+            if (success) {
+                showToast('info', '<i class="ri-clipboard-line me-1"></i> Copiado: ' + value);
+                
+                // Feedback visual temporário no elemento
+                const originalBg = this.style.backgroundColor;
+                this.style.backgroundColor = 'rgba(64, 81, 137, 0.2)';
+                setTimeout(() => {
+                    this.style.backgroundColor = originalBg;
+                }, 200);
+            } else {
+                showToast('error', 'Falha ao copiar para a área de transferência');
+            }
         });
     });
 });
