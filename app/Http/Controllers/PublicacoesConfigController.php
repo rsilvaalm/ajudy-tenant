@@ -15,17 +15,11 @@ class PublicacoesConfigController extends Controller
      */
     public function index(): View
     {
-        $tenantId = tenant('id');
+        // Usa $currentTenant compartilhado pelo InitializeTenancy
+        $currentTenant = view()->shared('currentTenant');
 
-        // Dados do landlord
-        $tenantData = DB::connection('landlord')
-            ->table('tenants')
-            ->where('id', $tenantId)
-            ->select('publicacoes_enabled', 'publicacoes_limite_mensal')
-            ->first();
-
-        $enabled      = (bool) ($tenantData->publicacoes_enabled      ?? false);
-        $limiteMensal = (int)  ($tenantData->publicacoes_limite_mensal ?? 0);
+        $enabled      = (bool)(int)($currentTenant->publicacoes_enabled      ?? 0);
+        $limiteMensal = (int)($currentTenant->publicacoes_limite_mensal ?? 0);
 
         // Consumo do mês atual (banco do tenant)
         $usage = $this->getMonthlyUsage($limiteMensal);
@@ -43,26 +37,37 @@ class PublicacoesConfigController extends Controller
      */
     public function toggle(Request $request): RedirectResponse
     {
-        $tenantId = tenant('id');
+        // Usa $currentTenant compartilhado pelo InitializeTenancy
+        $currentTenant = view()->shared('currentTenant');
 
-        // Verifica se o landlord habilitou para este tenant
+        if (!$currentTenant) {
+            return back()->with('error', 'Tenant não identificado.');
+        }
+
+        $tenantId = $currentTenant->id;
+
+        // Verifica se tem token configurado
         $tenantData = DB::connection('landlord')
             ->table('tenants')
             ->where('id', $tenantId)
             ->first(['publicacoes_enabled', 'escavador_api_key']);
 
         if (empty($tenantData->escavador_api_key)) {
-            return back()->with('error', 'Este recurso não está disponível. Contate o suporte.');
+            return back()->with('error', 'Este recurso não está disponível. Contate o suporte para configurar o acesso.');
         }
 
-        $current = (bool) ($tenantData->publicacoes_enabled ?? false);
+        $current = (bool)(int)($tenantData->publicacoes_enabled ?? 0);
 
         DB::connection('landlord')
             ->table('tenants')
             ->where('id', $tenantId)
             ->update(['publicacoes_enabled' => !$current]);
 
-        // Limpa o cache do ViewServiceProvider
+        // Invalida o cache do InitializeTenancy para este host
+        $host = $request->getHost();
+        \Illuminate\Support\Facades\Cache::forget("tenant_connection:{$host}");
+
+        // Limpa o bind do ViewServiceProvider para reexecutar no próximo request
         app()->forgetInstance('tenancy_customization_composed');
 
         $msg = !$current ? 'Publicações habilitadas!' : 'Publicações desabilitadas.';
@@ -74,9 +79,8 @@ class PublicacoesConfigController extends Controller
      */
     public function usage(): JsonResponse
     {
-        $tenantId     = tenant('id');
-        $tenantData   = DB::connection('landlord')->table('tenants')->where('id', $tenantId)->first(['publicacoes_limite_mensal']);
-        $limiteMensal = (int) ($tenantData->publicacoes_limite_mensal ?? 0);
+        $currentTenant = view()->shared('currentTenant');
+        $limiteMensal  = (int)($currentTenant->publicacoes_limite_mensal ?? 0);
 
         return response()->json($this->getMonthlyUsage($limiteMensal));
     }

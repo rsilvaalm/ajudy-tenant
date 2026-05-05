@@ -15,10 +15,20 @@ class InitializeTenancy
     {
         $host     = $request->getHost();
         $cacheKey = "tenant_connection:{$host}";
-        $cacheTtl = now()->addHour();
 
-        // Busca dados de conexão do landlord (com cache)
-        $tenantData = Cache::remember($cacheKey, $cacheTtl, function () use ($host) {
+        // ── Busca o updated_at do tenant (query leve, sem cache)
+        // Serve como "versão" — quando o landlord salva qualquer coisa no tenant,
+        // o updated_at muda, o versionedKey muda e o cache antigo é ignorado.
+        $updatedAt = DB::connection('landlord')
+            ->table('domains')
+            ->join('tenants', 'tenants.id', '=', 'domains.tenant_id')
+            ->where('domains.domain', $host)
+            ->value('tenants.updated_at');
+
+        $versionedKey = $cacheKey . ':' . ($updatedAt ?? 'none');
+
+        // ── Busca dados completos com cache versionado (TTL 1 hora)
+        $tenantData = Cache::remember($versionedKey, now()->addHour(), function () use ($host) {
             return DB::connection('landlord')
                 ->table('domains')
                 ->join('tenants', 'tenants.id', '=', 'domains.tenant_id')
@@ -42,15 +52,13 @@ class InitializeTenancy
         });
 
         if (!$tenantData) {
-            Cache::forget($cacheKey);
             abort(404, 'Tenant não encontrado ou inativo.');
         }
 
-        // ── APP_URL dinâmico baseado no subdomínio atual ───────────────────
+        // ── APP_URL dinâmico baseado no subdomínio atual ──────────────────
         Config::set('app.url', $request->getScheme() . '://' . $host);
 
         // Extrai dados de conexão do campo data (JSON)
-        // O landlord salva com prefixo 'db_', mas stancl/tenancy pode usar 'tenancy_db_'
         $data   = json_decode($tenantData->data ?? '{}', true) ?? [];
         $dbHost = $data['db_host']     ?? $data['tenancy_db_host']     ?? config('database.connections.landlord.host');
         $dbPort = $data['db_port']     ?? $data['tenancy_db_port']     ?? config('database.connections.landlord.port');
@@ -59,7 +67,6 @@ class InitializeTenancy
         $dbName = $data['db_name']     ?? $data['tenancy_db_name']     ?? null;
 
         if (!$dbName) {
-            Cache::forget($cacheKey);
             abort(503, 'Banco de dados do tenant não configurado.');
         }
 
@@ -81,7 +88,6 @@ class InitializeTenancy
         Config::set('database.default', 'tenant');
         DB::purge('tenant');
         DB::reconnect('tenant');
-
 
         // Compartilha dados do tenant com todas as views
         view()->share('currentTenant', $tenantData);

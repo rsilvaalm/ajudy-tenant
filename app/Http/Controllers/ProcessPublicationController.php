@@ -32,20 +32,24 @@ class ProcessPublicationController extends Controller
      */
     public function sync(int $processId): JsonResponse
     {
-        $tenantId = tenant('id');
-        $tenant   = DB::connection('landlord')->table('tenants')
-            ->where('id', $tenantId)->first();
+        // Usa currentTenant do InitializeTenancy
+        $tenant = view()->shared('currentTenant');
 
         // 1. Verifica se publicações estão habilitadas pelo landlord
-        if (!$tenant || !$tenant->publicacoes_enabled) {
+        if (!$tenant || !(bool)(int)($tenant->publicacoes_enabled ?? 0)) {
             return response()->json([
                 'error'   => 'disabled',
                 'message' => 'O módulo de publicações não está habilitado para este tenant.',
             ], 403);
         }
 
-        // 2. Verifica se tem token configurado
-        if (empty($tenant->escavador_api_key)) {
+        // 2. Verifica se tem token configurado (busca direto pois cache não inclui api_key por segurança)
+        $tenantWithKey = DB::connection('landlord')
+            ->table('tenants')
+            ->where('id', $tenant->id)
+            ->value('escavador_api_key');
+
+        if (empty($tenantWithKey)) {
             return response()->json([
                 'error'   => 'no_token',
                 'message' => 'Token do Escavador não configurado. Contate o suporte.',
@@ -148,10 +152,8 @@ class ProcessPublicationController extends Controller
             ->selectRaw('COUNT(*) as total_queries, COALESCE(SUM(credits_used),0) as total_credits, COALESCE(SUM(results_count),0) as total_results')
             ->first();
 
-        $limit = (int) DB::connection('landlord')
-            ->table('tenants')
-            ->where('id', tenant('id'))
-            ->value('publicacoes_limite_mensal');
+        $currentTenant = view()->shared('currentTenant');
+        $limit = (int)($currentTenant->publicacoes_limite_mensal ?? 0);
 
         $totalCredits = (int) ($queries->total_credits ?? 0);
 

@@ -83,6 +83,21 @@ Route::middleware(['web', InitializeTenancy::class])->group(function () {
                 Route::patch('usuarios/{id}/toggle', [UserController::class, 'toggleActive'])->name('usuarios.toggle');
             });
 
+            Route::get('debug-pub', function () {
+                $tenantId = tenant('id');
+                $data = DB::connection('landlord')
+                    ->table('tenants')
+                    ->where('id', $tenantId)
+                    ->first(['publicacoes_enabled', 'publicacoes_limite_mensal', 'escavador_api_key']);
+
+                return response()->json([
+                    'tenant_id'   => $tenantId,
+                    'raw'         => $data,
+                    'enabled_cast'=> (bool)(int)($data->publicacoes_enabled ?? 0),
+                    'shared'      => app()->make('view')->shared('publicacoesEnabled'),
+                ]);
+            });
+
             // Clientes + Processos + Agendamentos
             Route::middleware(CheckModuleAccess::class . ':clientes')->group(function () {
 
