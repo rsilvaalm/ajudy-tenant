@@ -13,6 +13,7 @@ use App\Http\Controllers\ProcessController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProfileUserController;
 use App\Http\Controllers\ScheduleController;
+use App\Http\Controllers\ProcessMovementController;
 use App\Http\Controllers\ProcessNoteController;
 use App\Http\Controllers\ScheduleTypeController;
 use App\Http\Controllers\UserController;
@@ -108,6 +109,10 @@ Route::middleware(['web', InitializeTenancy::class])->group(function () {
                 // Anotações do processo — estáticas ANTES de processos/{id}
                 Route::get('processos/{processId}/anotacoes',    [ProcessNoteController::class, 'byProcess'])->name('processos.notas.list');
                 Route::post('processos/anotacoes',               [ProcessNoteController::class, 'store'])->name('processos.notas.store');
+                // Movimentações DataJud
+                Route::get('processos/{processId}/movimentacoes',  [ProcessMovementController::class, 'index'])->name('processos.movimentacoes.index');
+                Route::post('processos/{processId}/movimentacoes/sync', [ProcessMovementController::class, 'sync'])->name('processos.movimentacoes.sync');
+
                 Route::put('processos/anotacoes/{id}',           [ProcessNoteController::class, 'update'])->name('processos.notas.update');
                 Route::delete('processos/anotacoes/{id}',        [ProcessNoteController::class, 'destroy'])->name('processos.notas.destroy');
 

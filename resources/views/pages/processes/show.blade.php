@@ -58,6 +58,14 @@
                 </a>
             </li>
             <li class="nav-item" role="presentation">
+                <a class="nav-link py-3 text-muted" data-bs-toggle="tab" href="#tab-andamento" role="tab"
+                   id="tab-andamento-btn" data-anchor="movimentacoes">
+                    <i class="ri-time-line me-1"></i>
+                    <span class="d-none d-sm-inline">Movimentações</span>
+                    <span id="badge-movimentacoes" class="badge bg-secondary-subtle text-secondary ms-1" style="display:none;"></span>
+                </a>
+            </li>
+            <li class="nav-item" role="presentation">
                 <a class="nav-link py-3 text-muted" data-bs-toggle="tab" href="#tab-despesas" role="tab"
                    data-anchor="despesas">
                     <i class="ri-money-dollar-circle-line me-1"></i>
@@ -150,6 +158,26 @@
             </div>
         </div>
 
+        <div class="tab-pane" id="tab-andamento" role="tabpanel">
+            <div class="d-flex align-items-center justify-content-between mb-4">
+                <div>
+                    <h6 class="fw-semibold mb-0">Movimentações</h6>
+                    <small class="text-muted" id="mov-process-data"></small>
+                    <div id="mov-last-synced" class="fs-12 text-muted">Nunca sincronizado</div>
+                </div>
+                <button class="btn btn-sm btn-primary" id="btn-sync-datajud">
+                    <i class="ri-refresh-line me-1"></i> Sincronizar DataJud
+                </button>
+            </div>
+            <div id="movements-list">
+                <div class="text-center text-muted py-5">
+                    <i class="ri-time-line fs-36 d-block mb-2 opacity-25"></i>
+                    <p class="mb-1">Nenhuma movimentação carregada.</p>
+                    <small>Clique em <strong>Sincronizar DataJud</strong> para buscar as movimentações oficiais.</small>
+                </div>
+            </div>
+        </div>
+
         <div class="tab-pane" id="tab-despesas" role="tabpanel">
             <div class="text-center text-muted py-5">
                 <i class="ri-money-dollar-circle-line fs-48 d-block mb-2 opacity-25"></i>
@@ -170,7 +198,7 @@
 <div class="modal fade" id="newScheduleModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
-            <div class="modal-header p-3 align-items-center" style="background:var(--brand-primary);">
+            <div class="modal-header align-items-center" style="background:var(--brand-primary);">
                 <h5 class="modal-title text-white d-flex align-items-center gap-2 mb-0">
                     <i class="ri-calendar-add-line fs-18"></i> Novo Agendamento
                 </h5>
@@ -227,7 +255,7 @@
 <div class="modal fade" id="noteModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
-            <div class="modal-header p-3 align-items-center" style="background:var(--brand-primary);">
+            <div class="modal-header align-items-center" style="background:var(--brand-primary);">
                 <h5 class="modal-title text-white d-flex align-items-center gap-2 mb-0" id="note_modal_title">
                     <i class="ri-sticky-note-line fs-18"></i> Nova Anotação
                 </h5>
@@ -958,6 +986,163 @@ function deleteNote(id) {
             });
         },
     });
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// ABA MOVIMENTAÇÕES (DataJud)
+// ════════════════════════════════════════════════════════════════════════════
+
+document.getElementById('tab-andamento-btn').addEventListener('shown.bs.tab', function () {
+    // Carrega movimentações já salvas ao entrar na aba
+    loadMovements(false);
+});
+
+document.getElementById('btn-sync-datajud').addEventListener('click', function () {
+    syncMovements();
+});
+
+function syncMovements() {
+    var btn  = document.getElementById('btn-sync-datajud');
+    var list = document.getElementById('movements-list');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Consultando DataJud...';
+    list.innerHTML = '<div class="text-center py-4"><div class="spinner-border spinner-border-sm text-primary" role="status"></div><p class="text-muted mt-2 fs-13">Consultando DataJud...</p></div>';
+
+    fetch('/processos/' + PROCESS_ID + '/movimentacoes/sync', {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+            'X-Requested-With': 'XMLHttpRequest',
+        },
+    })
+    .then(r => r.json())
+    .then(function(data) {
+        if (data.success) {
+            var msg = data.synced > 0
+                ? data.synced + ' nova(s) movimentação(ões) adicionada(s).'
+                : 'Já estava atualizado.';
+            showToast('success', 'DataJud sincronizado. ' + msg);
+            renderMovements(data.movements, data.process_data);
+            updateMovBadge(data.total);
+            updateLastSynced(data.last_synced_at);
+        } else {
+            list.innerHTML = '<div class="alert alert-warning d-flex gap-2 align-items-start"><i class="ri-information-line fs-18 flex-shrink-0 mt-1"></i><div><strong>Não foi possível consultar o DataJud.</strong><br><small>' + (data.message || 'Verifique o número do processo.') + '</small></div></div>';
+        }
+    })
+    .catch(function() {
+        list.innerHTML = '<div class="text-center text-muted py-3"><small>Erro ao consultar DataJud.</small></div>';
+    })
+    .finally(function() {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="ri-refresh-line me-1"></i> Sincronizar DataJud';
+    });
+}
+
+function loadMovements(showSpinner) {
+    if (showSpinner) {
+        document.getElementById('movements-list').innerHTML = '<div class="text-center py-4"><div class="spinner-border spinner-border-sm text-primary" role="status"></div></div>';
+    }
+
+    fetch('/processos/' + PROCESS_ID + '/movimentacoes', {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(r => r.json())
+    .then(function(data) {
+        if (data.movements && data.movements.length) {
+            renderMovements(data.movements, null);
+            updateMovBadge(data.movements.length);
+        }
+        updateLastSynced(data.last_synced_at || null);
+        // Se vazio, mantém o estado inicial (instrução para sincronizar)
+    })
+    .catch(function() {});
+}
+
+function updateMovBadge(total) {
+    var badge = document.getElementById('badge-movimentacoes');
+    if (total > 0) {
+        badge.textContent = total;
+        badge.style.display = 'inline';
+    }
+}
+
+function updateLastSynced(lastSyncedAt) {
+    var el = document.getElementById('mov-last-synced');
+    if (!el) return;
+    if (!lastSyncedAt) {
+        el.textContent = 'Nunca sincronizado';
+        el.className = 'fs-12 text-muted';
+        return;
+    }
+    var d = new Date(lastSyncedAt);
+    var pad = n => String(n).padStart(2, '0');
+    var formatted = pad(d.getDate()) + '/' + pad(d.getMonth()+1) + '/' + d.getFullYear()
+        + ' às ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+    el.textContent = 'Última sincronização: ' + formatted;
+    el.className = 'fs-12 text-muted';
+}
+
+function renderMovements(movements, processData) {
+    var list = document.getElementById('movements-list');
+
+    if (!movements || !movements.length) {
+        list.innerHTML = '<div class="text-center text-muted py-5"><i class="ri-time-line fs-36 d-block mb-2 opacity-25"></i><p>Nenhuma movimentação encontrada.</p></div>';
+        return;
+    }
+
+    // Info do processo do DataJud (classe, assunto, tribunal)
+    if (processData) {
+        var infoEl = document.getElementById('mov-process-data');
+        var parts = [];
+        if (processData.tribunal)        parts.push(processData.tribunal);
+        if (processData.classe)          parts.push(processData.classe);
+        if (processData.orgao_julgador)  parts.push(processData.orgao_julgador);
+        if (parts.length) infoEl.textContent = parts.join(' · ');
+    }
+
+    // Agrupa por data
+    var grouped = {};
+    movements.forEach(function(m) {
+        var d = (m.movement_date || '').slice(0, 10);
+        if (!grouped[d]) grouped[d] = [];
+        grouped[d].push(m);
+    });
+
+    var months = ['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
+    var html = '<div class="movements-timeline">';
+
+    Object.keys(grouped).forEach(function(date) {
+        var parts = date.split('-');
+        var dateLabel = parts[2] + ' ' + months[parseInt(parts[1]) - 1] + ' ' + parts[0];
+
+        html += '<div class="mb-4">'
+            + '<div class="d-flex align-items-center gap-3 mb-3">'
+            + '<span class="mov-date-badge"><i class="ri-calendar-check-line me-1"></i>' + dateLabel + '</span>'
+            + '<div class="flex-grow-1" style="height:1px;background:#e9ecef;"></div>'
+            + '</div>';
+
+        grouped[date].forEach(function(m) {
+            html += '<div class="d-flex gap-3 mb-2 align-items-start">'
+                + '<div class="flex-shrink-0 mt-1">'
+                + '<div style="width:10px;height:10px;border-radius:50%;background:var(--brand-primary);margin-top:4px;"></div>'
+                + '</div>'
+                + '<div class="flex-grow-1 pb-2 border-bottom">'
+                + '<p class="mb-0 fs-13">' + (m.description || '') + '</p>'
+                + (m.code ? '<small class="text-muted">Código: ' + m.code + '</small>' : '')
+                + '</div>'
+                + '</div>';
+        });
+
+        html += '</div>';
+    });
+
+    html += '</div>'
+        + '<style>'
+        + '.movements-timeline { position:relative; }'
+        + '.mov-date-badge { display:inline-flex;align-items:center;gap:6px;background:#f3f4f6;color:#495057;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;letter-spacing:.04em; }'
+        + '</style>';
+
+    list.innerHTML = html;
 }
 
 function formatDate(d) {
