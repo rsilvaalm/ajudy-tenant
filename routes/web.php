@@ -13,6 +13,7 @@ use App\Http\Controllers\ProcessController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProfileUserController;
 use App\Http\Controllers\ScheduleController;
+use App\Http\Controllers\ProcessNoteController;
 use App\Http\Controllers\ScheduleTypeController;
 use App\Http\Controllers\UserController;
 use App\Http\Middleware\CheckModuleAccess;
@@ -104,6 +105,12 @@ Route::middleware(['web', InitializeTenancy::class])->group(function () {
                 Route::get('processos/novo',         [ProcessController::class, 'create'])->name('processos.create');
                 Route::get('processos/buscar',       [ProcessController::class, 'search'])->name('processos.buscar');
                 Route::get('processos/cliente/{id}', [ProcessController::class, 'byClient'])->name('processos.byClient');
+                // Anotações do processo — estáticas ANTES de processos/{id}
+                Route::get('processos/{processId}/anotacoes',    [ProcessNoteController::class, 'byProcess'])->name('processos.notas.list');
+                Route::post('processos/anotacoes',               [ProcessNoteController::class, 'store'])->name('processos.notas.store');
+                Route::put('processos/anotacoes/{id}',           [ProcessNoteController::class, 'update'])->name('processos.notas.update');
+                Route::delete('processos/anotacoes/{id}',        [ProcessNoteController::class, 'destroy'])->name('processos.notas.destroy');
+
                 Route::post('processos',             [ProcessController::class, 'store'])->name('processos.store');
                 Route::get('processos/{id}',         [ProcessController::class, 'show'])->name('processos.show');
                 Route::get('processos/{id}/editar',  [ProcessController::class, 'edit'])->name('processos.edit');
@@ -124,6 +131,8 @@ Route::middleware(['web', InitializeTenancy::class])->group(function () {
                 Route::patch('agendamentos/{id}/concluir',      [ScheduleController::class, 'complete'])->name('agendamentos.complete');
                 Route::patch('agendamentos/{id}/reabrir',       [ScheduleController::class, 'reopen'])->name('agendamentos.reopen');
                 Route::delete('agendamentos/{id}',              [ScheduleController::class, 'destroy'])->name('agendamentos.destroy');
+
+
             });
 
         });
