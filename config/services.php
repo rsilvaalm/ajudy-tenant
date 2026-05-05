@@ -37,5 +37,8 @@ return [
     'datajud' => [
         'key' => env('DATAJUD_API_KEY', 'cDZHYzlZa0JadVREZDJCendQbXY6SkJlTzNjLV9TRENyQk1RdnFKZGRQdw=='),
     ],
+    'escavador' => [
+        'key' => env('ESCAVADOR_API_KEY'), // chave global do Ajudy
+    ],
 
 ];

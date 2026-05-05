@@ -65,6 +65,16 @@
                     <span id="badge-movimentacoes" class="badge bg-secondary-subtle text-secondary ms-1" style="display:none;"></span>
                 </a>
             </li>
+            @if(!empty($publicacoesEnabled))
+            <li class="nav-item" role="presentation" id="tab-publicacoes-nav">
+                <a class="nav-link py-3 text-muted" data-bs-toggle="tab" href="#tab-publicacoes" role="tab"
+                   id="tab-publicacoes-btn" data-anchor="publicacoes">
+                    <i class="ri-newspaper-line me-1"></i>
+                    <span class="d-none d-sm-inline">Publicações</span>
+                    <span id="badge-publicacoes" class="badge bg-info-subtle text-info ms-1" style="display:none;"></span>
+                </a>
+            </li>
+            @endif
             <li class="nav-item" role="presentation">
                 <a class="nav-link py-3 text-muted" data-bs-toggle="tab" href="#tab-despesas" role="tab"
                    data-anchor="despesas">
@@ -177,6 +187,39 @@
                 </div>
             </div>
         </div>
+
+        @if(!empty($publicacoesEnabled))
+        <div class="tab-pane" id="tab-publicacoes" role="tabpanel">
+            <div class="d-flex align-items-center justify-content-between mb-4">
+                <div>
+                    <h6 class="fw-semibold mb-0">Publicações</h6>
+                    <small class="text-muted" id="pub-usage-label"></small>
+                </div>
+                <button class="btn btn-sm btn-primary" id="btn-sync-publicacoes">
+                    <i class="ri-refresh-line me-1"></i> Buscar publicações
+                </button>
+            </div>
+
+            {{-- Consumo mensal --}}
+            <div id="pub-usage-bar" class="mb-4" style="display:none;">
+                <div class="d-flex align-items-center justify-content-between mb-1">
+                    <small class="text-muted fs-12">Consumo este mês</small>
+                    <small class="text-muted fs-12" id="pub-usage-text"></small>
+                </div>
+                <div class="progress" style="height:6px;">
+                    <div class="progress-bar" id="pub-usage-progress" role="progressbar" style="width:0%"></div>
+                </div>
+            </div>
+
+            <div id="publications-list">
+                <div class="text-center text-muted py-5">
+                    <i class="ri-newspaper-line fs-36 d-block mb-2 opacity-25"></i>
+                    <p class="mb-1">Nenhuma publicação carregada.</p>
+                    <small>Clique em <strong>Buscar publicações</strong> para consultar o Escavador.</small>
+                </div>
+            </div>
+        </div>
+        @endif
 
         <div class="tab-pane" id="tab-despesas" role="tabpanel">
             <div class="text-center text-muted py-5">
@@ -1141,6 +1184,157 @@ function renderMovements(movements, processData) {
         + '.movements-timeline { position:relative; }'
         + '.mov-date-badge { display:inline-flex;align-items:center;gap:6px;background:#f3f4f6;color:#495057;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;letter-spacing:.04em; }'
         + '</style>';
+
+    list.innerHTML = html;
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// ABA PUBLICAÇÕES (Escavador)
+// ════════════════════════════════════════════════════════════════════════════
+var PUBLICACOES_ENABLED = {{ !empty($publicacoesEnabled) ? 'true' : 'false' }};
+
+document.addEventListener('DOMContentLoaded', function () {
+    // Exibe ou oculta a aba conforme permissão do tenant
+    if (PUBLICACOES_ENABLED) {
+        document.getElementById('tab-publicacoes-nav').style.display = '';
+    }
+});
+
+document.getElementById('tab-publicacoes-btn').addEventListener('shown.bs.tab', function () {
+    loadPublications(false);
+});
+
+document.getElementById('btn-sync-publicacoes').addEventListener('click', function () {
+    syncPublications();
+});
+
+function syncPublications() {
+    var btn  = document.getElementById('btn-sync-publicacoes');
+    var list = document.getElementById('publications-list');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Consultando...';
+    list.innerHTML = '<div class="text-center py-4"><div class="spinner-border spinner-border-sm text-primary" role="status"></div><p class="text-muted mt-2 fs-13">Consultando Escavador...</p></div>';
+
+    fetch('/processos/' + PROCESS_ID + '/publicacoes/sync', {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+            'X-Requested-With': 'XMLHttpRequest',
+        },
+    })
+    .then(r => r.json())
+    .then(function(data) {
+        if (data.success) {
+            var msg = data.synced > 0 ? data.synced + ' nova(s) publicação(ões) encontrada(s).' : 'Nenhuma novidade.';
+            showToast('success', 'Escavador consultado. ' + msg);
+            renderPublications(data.publications);
+            updatePubBadge(data.total);
+            updateUsageBar(data.usage);
+        } else if (data.error === 'limit_reached') {
+            list.innerHTML = '<div class="alert alert-warning d-flex gap-2 align-items-start"><i class="ri-alert-line fs-18 flex-shrink-0 mt-1"></i><div><strong>Limite mensal atingido.</strong><br><small>' + data.message + '</small></div></div>';
+            updateUsageBar(data.usage);
+        } else {
+            list.innerHTML = '<div class="alert alert-danger d-flex gap-2 align-items-start"><i class="ri-error-warning-line fs-18 flex-shrink-0 mt-1"></i><div><strong>Erro ao consultar Escavador.</strong><br><small>' + (data.message || 'Tente novamente.') + '</small></div></div>';
+        }
+    })
+    .catch(function() {
+        list.innerHTML = '<div class="text-center text-muted py-3"><small>Erro inesperado. Tente novamente.</small></div>';
+    })
+    .finally(function() {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="ri-refresh-line me-1"></i> Buscar publicações';
+    });
+}
+
+function loadPublications(showSpinner) {
+    if (showSpinner) {
+        document.getElementById('publications-list').innerHTML = '<div class="text-center py-4"><div class="spinner-border spinner-border-sm text-primary" role="status"></div></div>';
+    }
+    fetch('/processos/' + PROCESS_ID + '/publicacoes', {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(r => r.json())
+    .then(function(data) {
+        if (data.publications && data.publications.length) {
+            renderPublications(data.publications);
+            updatePubBadge(data.publications.length);
+        }
+        if (data.usage) updateUsageBar(data.usage);
+    })
+    .catch(function() {});
+}
+
+function updatePubBadge(total) {
+    var badge = document.getElementById('badge-publicacoes');
+    if (total > 0) { badge.textContent = total; badge.style.display = 'inline'; }
+}
+
+function updateUsageBar(usage) {
+    if (!usage) return;
+    var bar  = document.getElementById('pub-usage-bar');
+    var text = document.getElementById('pub-usage-text');
+    var prog = document.getElementById('pub-usage-progress');
+    var label = document.getElementById('pub-usage-label');
+
+    bar.style.display = 'block';
+
+    var creditsText = usage.total_credits + ' crédito(s) usados em ' + usage.month;
+    if (usage.limit > 0) creditsText += ' / limite: ' + usage.limit;
+    text.textContent = creditsText;
+    if (label) label.textContent = usage.total_queries + ' consulta(s) este mês';
+
+    var pct = usage.limit_percent || 0;
+    prog.style.width = Math.min(pct, 100) + '%';
+    prog.className = 'progress-bar ' + (pct >= 90 ? 'bg-danger' : pct >= 70 ? 'bg-warning' : 'bg-success');
+}
+
+function renderPublications(publications) {
+    var list = document.getElementById('publications-list');
+    if (!publications || !publications.length) {
+        list.innerHTML = '<div class="text-center text-muted py-5"><i class="ri-newspaper-line fs-36 d-block mb-2 opacity-25"></i><p>Nenhuma publicação encontrada para este processo.</p></div>';
+        return;
+    }
+
+    // Agrupa por data
+    var grouped = {};
+    publications.forEach(function(p) {
+        var d = (p.publication_date || '').slice(0, 10);
+        if (!grouped[d]) grouped[d] = [];
+        grouped[p.publication_date ? d : 'sem-data'].push(p);
+    });
+
+    var months = ['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
+    var html = '';
+
+    Object.keys(grouped).sort().reverse().forEach(function(date) {
+        var dateLabel = '—';
+        if (date !== 'sem-data') {
+            var parts = date.split('-');
+            if (parts.length === 3) dateLabel = parts[2] + ' ' + months[parseInt(parts[1])-1] + ' ' + parts[0];
+        }
+
+        html += '<div class="mb-4">'
+            + '<div class="d-flex align-items-center gap-3 mb-3">'
+            + '<span style="display:inline-flex;align-items:center;gap:6px;background:#f3f4f6;color:#495057;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;">'
+            + '<i class="ri-newspaper-line"></i>' + dateLabel + '</span>'
+            + '<div class="flex-grow-1" style="height:1px;background:#e9ecef;"></div>'
+            + '</div>';
+
+        grouped[date].forEach(function(p) {
+            var meta = [];
+            if (p.diario)   meta.push('<span class="badge bg-light text-muted border">' + p.diario + '</span>');
+            if (p.caderno)  meta.push('<span class="badge bg-light text-muted border">' + p.caderno + '</span>');
+            if (p.source)   meta.push('<small class="text-muted">' + p.source + '</small>');
+
+            html += '<div class="card border mb-3">'
+                + '<div class="card-body py-3">'
+                + (meta.length ? '<div class="d-flex flex-wrap gap-1 mb-2">' + meta.join('') + '</div>' : '')
+                + '<p class="mb-0 fs-13 text-muted" style="white-space:pre-wrap;line-height:1.7;">' + (p.content || '') + '</p>'
+                + '</div></div>';
+        });
+
+        html += '</div>';
+    });
 
     list.innerHTML = html;
 }

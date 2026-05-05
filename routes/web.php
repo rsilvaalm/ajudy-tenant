@@ -14,6 +14,8 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProfileUserController;
 use App\Http\Controllers\ScheduleController;
 use App\Http\Controllers\ProcessMovementController;
+use App\Http\Controllers\ProcessPublicationController;
+use App\Http\Controllers\PublicacoesConfigController;
 use App\Http\Controllers\ProcessNoteController;
 use App\Http\Controllers\ScheduleTypeController;
 use App\Http\Controllers\UserController;
@@ -59,6 +61,11 @@ Route::middleware(['web', InitializeTenancy::class])->group(function () {
             Route::delete('atendimentos/{id}',            [AttendanceListController::class, 'destroy'])->name('atendimentos.destroy');
 
             // Gestão de Usuários
+            // Configurações de publicações (acesso para qualquer usuário autenticado)
+            Route::get('configuracoes/publicacoes',         [PublicacoesConfigController::class, 'index'])->name('publicacoes.config.index');
+            Route::post('configuracoes/publicacoes/toggle', [PublicacoesConfigController::class, 'toggle'])->name('publicacoes.config.toggle');
+            Route::get('configuracoes/publicacoes/usage',   [PublicacoesConfigController::class, 'usage'])->name('publicacoes.config.usage');
+
             Route::middleware(CheckModuleAccess::class . ':gestao-de-usuarios')->group(function () {
                 Route::get('perfis',             [ProfileController::class, 'index'])->name('perfis.index');
                 Route::get('perfis/criar',       [ProfileController::class, 'create'])->name('perfis.create');
@@ -109,6 +116,10 @@ Route::middleware(['web', InitializeTenancy::class])->group(function () {
                 // Anotações do processo — estáticas ANTES de processos/{id}
                 Route::get('processos/{processId}/anotacoes',    [ProcessNoteController::class, 'byProcess'])->name('processos.notas.list');
                 Route::post('processos/anotacoes',               [ProcessNoteController::class, 'store'])->name('processos.notas.store');
+                // Publicações (Escavador)
+                Route::get('processos/{processId}/publicacoes',       [ProcessPublicationController::class, 'index'])->name('processos.publicacoes.index');
+                Route::post('processos/{processId}/publicacoes/sync',  [ProcessPublicationController::class, 'sync'])->name('processos.publicacoes.sync');
+
                 // Movimentações DataJud
                 Route::get('processos/{processId}/movimentacoes',  [ProcessMovementController::class, 'index'])->name('processos.movimentacoes.index');
                 Route::post('processos/{processId}/movimentacoes/sync', [ProcessMovementController::class, 'sync'])->name('processos.movimentacoes.sync');

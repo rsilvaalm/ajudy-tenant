@@ -34,6 +34,7 @@
         if ($hasClientes)  $configItems[] = 'campos_personalizados';
         if ($hasProcessos) $configItems[] = 'pastas';
         if ($hasProcessos) $configItems[] = 'tipos_agendamento';
+        if (!empty($publicacoesEnabled)) $configItems[] = 'publicacoes';
     @endphp
     <style>
         :root { --brand-primary:{{ $primary }};--brand-secondary:{{ $secondary }};--brand-tertiary:{{ $tertiary }}; }
@@ -264,6 +265,14 @@
                             <li class="nav-item">
                                 <a href="{{ route('agendamentos.tipos.index') }}" class="nav-link {{ request()->routeIs('agendamentos.tipos.*') ? 'active' : '' }}">
                                     <i class="ri-calendar-check-line me-1"></i> Tipos de agendamento
+                                </a>
+                            </li>
+                            @endif
+                            @if(in_array('publicacoes', $configItems) && Route::has('publicacoes.config.index'))
+                            <li class="nav-item">
+                                <a href="{{ route('publicacoes.config.index') }}"
+                                   class="nav-link {{ request()->routeIs('publicacoes.config.*') ? 'active' : '' }}">
+                                    <i class="ri-newspaper-line me-1"></i> Publicações
                                 </a>
                             </li>
                             @endif
