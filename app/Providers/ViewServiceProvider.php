@@ -24,35 +24,6 @@ class ViewServiceProvider extends ServiceProvider
                 }
 
                 View::share('customization', $customization);
-
-                // ── Configurações de publicações (lidas do landlord) ──────
-                try {
-                    $tenantId = tenant('id');
-
-                    $tenantData = DB::connection('landlord')
-                        ->table('tenants')
-                        ->where('id', $tenantId)
-                        ->select('publicacoes_enabled', 'publicacoes_limite_mensal')
-                        ->first();
-
-                    // MySQL retorna TINYINT como string "0"/"1" dependendo do driver.
-                    // Cast via (int) garante que "1" vira 1 antes do (bool).
-                    $enabled = $tenantData
-                        ? (bool) (int) $tenantData->publicacoes_enabled
-                        : false;
-
-                    $limite = $tenantData
-                        ? (int) $tenantData->publicacoes_limite_mensal
-                        : 0;
-
-                    View::share('publicacoesEnabled',      $enabled);
-                    View::share('publicacoesLimiteMensal', $limite);
-
-                } catch (\Throwable $e) {
-                    Log::debug('ViewServiceProvider publicacoes: ' . $e->getMessage());
-                    View::share('publicacoesEnabled',      false);
-                    View::share('publicacoesLimiteMensal', 0);
-                }
             }
         });
     }

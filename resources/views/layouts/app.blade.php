@@ -34,7 +34,7 @@
         if ($hasClientes)  $configItems[] = 'campos_personalizados';
         if ($hasProcessos) $configItems[] = 'pastas';
         if ($hasProcessos) $configItems[] = 'tipos_agendamento';
-        if (!empty($publicacoesEnabled)) $configItems[] = 'publicacoes';
+        if (!empty($currentTenant->publicacoes_enabled)) $configItems[] = 'publicacoes';
     @endphp
     <style>
         :root { --brand-primary:{{ $primary }};--brand-secondary:{{ $secondary }};--brand-tertiary:{{ $tertiary }}; }

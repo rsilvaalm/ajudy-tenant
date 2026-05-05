@@ -65,7 +65,7 @@
                     <span id="badge-movimentacoes" class="badge bg-secondary-subtle text-secondary ms-1" style="display:none;"></span>
                 </a>
             </li>
-            @if(!empty($publicacoesEnabled))
+            @if(!empty($currentTenant->publicacoes_enabled))
             <li class="nav-item" role="presentation" id="tab-publicacoes-nav">
                 <a class="nav-link py-3 text-muted" data-bs-toggle="tab" href="#tab-publicacoes" role="tab"
                    id="tab-publicacoes-btn" data-anchor="publicacoes">
@@ -188,7 +188,7 @@
             </div>
         </div>
 
-        @if(!empty($publicacoesEnabled))
+        @if(!empty($currentTenant->publicacoes_enabled))
         <div class="tab-pane" id="tab-publicacoes" role="tabpanel">
             <div class="d-flex align-items-center justify-content-between mb-4">
                 <div>
@@ -1191,7 +1191,7 @@ function renderMovements(movements, processData) {
 // ════════════════════════════════════════════════════════════════════════════
 // ABA PUBLICAÇÕES (Escavador)
 // ════════════════════════════════════════════════════════════════════════════
-var PUBLICACOES_ENABLED = {{ !empty($publicacoesEnabled) ? 'true' : 'false' }};
+var PUBLICACOES_ENABLED = {{ !empty($currentTenant->publicacoes_enabled) ? 'true' : 'false' }};
 
 document.addEventListener('DOMContentLoaded', function () {
     // Exibe ou oculta a aba conforme permissão do tenant

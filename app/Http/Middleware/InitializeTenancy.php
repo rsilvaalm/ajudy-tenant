@@ -35,6 +35,8 @@ class InitializeTenancy
                     'tenants.logo_vertical',
                     'tenants.logo_negative',
                     'tenants.db_processed_at',
+                    'tenants.publicacoes_enabled',
+                    'tenants.publicacoes_limite_mensal'
                 )
                 ->first();
         });
