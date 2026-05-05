@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="pt-BR" data-layout="vertical" data-topbar="light" data-sidebar="dark" data-sidebar-size="lg" data-sidebar-image="none" data-preloader="disable">
+<html lang="pt-BR" data-layout="vertical" data-topbar="light" data-sidebar="dark" data-sidebar-size="sm" data-sidebar-image="none" data-preloader="disable">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+
     <title>@yield('title', 'Dashboard') — {{ $currentTenant->name ?? 'Ajudy' }}</title>
     <link rel="shortcut icon" href="{{ asset('assets/images/ajudy/favicon.png') }}">
     <script src="{{ asset('assets/js/layout.js') }}"></script>
@@ -51,6 +52,11 @@
         [data-bs-theme="dark"] .logo-tenant-light{display:none;}[data-bs-theme="dark"] .logo-tenant-dark{display:block;}
         [data-sidebar-size="sm"] .collapse.show{display:none!important;}
         [data-sidebar-size="sm"] .nav-sm{display:none!important;}
+        #scrollbar{overflow-y:auto;overflow-x:hidden;}
+        #scrollbar::-webkit-scrollbar{width:4px;}
+        #scrollbar::-webkit-scrollbar-track{background:transparent;}
+        #scrollbar::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:4px;}
+        #scrollbar::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.3);}
         #btn-attendance-topbar{display:flex;align-items:center;gap:6px;padding:6px 14px;border-radius:20px;border:2px solid var(--brand-primary);color:var(--brand-primary);background:transparent;font-size:13px;font-weight:600;transition:all .2s;white-space:nowrap;}
         #btn-attendance-topbar:hover{background:var(--brand-primary);color:#fff;}
         #btn-attendance-topbar.btn-attendance-active{background:var(--brand-primary);color:#fff;}
@@ -394,6 +400,20 @@ document.addEventListener('DOMContentLoaded', function () {
         form.innerHTML = '<input type="hidden" name="_token" value="{{ csrf_token() }}"><input type="hidden" name="_method" value="DELETE">';
         document.body.appendChild(form); form.submit();
     });
+});
+
+// ── Proteção contra botão "Voltar" após lock screen ─────────────────────
+// O bfcache (back/forward cache) do browser restaura páginas sem fazer
+// nova requisição ao servidor — por isso o middleware não é acionado.
+// O evento 'pageshow' com persisted=true é disparado EXATAMENTE nesse caso.
+// É a única forma confiável de detectar restauração do bfcache.
+window.addEventListener('pageshow', function (e) {
+    if (e.persisted) {
+        // Página foi restaurada do bfcache (botão Voltar/Avançar)
+        // Força reload para o servidor processar a requisição normalmente
+        // e o HandleLockScreen redirecionar se necessário
+        window.location.reload();
+    }
 });
 
 function showToast(type, message) {

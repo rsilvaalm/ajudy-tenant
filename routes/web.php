@@ -39,6 +39,7 @@ Route::middleware(['web', InitializeTenancy::class])->group(function () {
         Route::get('lock',           [LockScreenController::class, 'show'])->name('lock');
         Route::post('lock',          [LockScreenController::class, 'unlock'])->name('lock.unlock');
         Route::post('lock/activate', [LockScreenController::class, 'lock'])->name('lock.activate');
+        Route::post('lock/logout',   [LockScreenController::class, 'lockLogout'])->name('lock.logout');
 
         Route::middleware(HandleLockScreen::class)->group(function () {
 
@@ -62,9 +63,10 @@ Route::middleware(['web', InitializeTenancy::class])->group(function () {
 
             // Gestão de Usuários
             // Configurações de publicações (acesso para qualquer usuário autenticado)
-            Route::get('configuracoes/publicacoes',         [PublicacoesConfigController::class, 'index'])->name('publicacoes.config.index');
-            Route::post('configuracoes/publicacoes/toggle', [PublicacoesConfigController::class, 'toggle'])->name('publicacoes.config.toggle');
-            Route::get('configuracoes/publicacoes/usage',   [PublicacoesConfigController::class, 'usage'])->name('publicacoes.config.usage');
+            Route::get('configuracoes/publicacoes',              [PublicacoesConfigController::class, 'index'])->name('publicacoes.config.index');
+            Route::post('configuracoes/publicacoes/toggle',       [PublicacoesConfigController::class, 'toggle'])->name('publicacoes.config.toggle');
+            Route::post('configuracoes/publicacoes/limite',        [PublicacoesConfigController::class, 'saveLimite'])->name('publicacoes.config.limite');
+            Route::get('configuracoes/publicacoes/usage',          [PublicacoesConfigController::class, 'usage'])->name('publicacoes.config.usage');
 
             Route::middleware(CheckModuleAccess::class . ':gestao-de-usuarios')->group(function () {
                 Route::get('perfis',             [ProfileController::class, 'index'])->name('perfis.index');
@@ -81,21 +83,6 @@ Route::middleware(['web', InitializeTenancy::class])->group(function () {
                 Route::put('usuarios/{id}',          [UserController::class, 'update'])->name('usuarios.update');
                 Route::delete('usuarios/{id}',       [UserController::class, 'destroy'])->name('usuarios.destroy');
                 Route::patch('usuarios/{id}/toggle', [UserController::class, 'toggleActive'])->name('usuarios.toggle');
-            });
-
-            Route::get('debug-pub', function () {
-                $tenantId = tenant('id');
-                $data = DB::connection('landlord')
-                    ->table('tenants')
-                    ->where('id', $tenantId)
-                    ->first(['publicacoes_enabled', 'publicacoes_limite_mensal', 'escavador_api_key']);
-
-                return response()->json([
-                    'tenant_id'   => $tenantId,
-                    'raw'         => $data,
-                    'enabled_cast'=> (bool)(int)($data->publicacoes_enabled ?? 0),
-                    'shared'      => app()->make('view')->shared('publicacoesEnabled'),
-                ]);
             });
 
             // Clientes + Processos + Agendamentos

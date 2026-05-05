@@ -5,10 +5,10 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
-use Illuminate\View\View;
 
 class LockScreenController extends Controller
 {
@@ -25,17 +25,41 @@ class LockScreenController extends Controller
 
     /**
      * Exibe a tela de bloqueio.
+     * Headers no-cache impedem que o browser sirva páginas anteriores
+     * via botão "Voltar" sem passar pela autenticação.
      */
-    public function show(Request $request): View|RedirectResponse
+    public function show(Request $request): Response|RedirectResponse
     {
-        // Se não está bloqueado, volta para o dashboard
         if (!$request->session()->get('screen_locked')) {
             return redirect()->route('dashboard');
         }
 
         $customization = DB::table('customization')->first();
 
-        return view('auth.lock', compact('customization'));
+        return response()
+            ->view('auth.lock', compact('customization'))
+            ->withHeaders([
+                'Cache-Control' => 'no-cache, no-store, must-revalidate, private',
+                'Pragma'        => 'no-cache',
+                'Expires'       => '0',
+            ]);
+    }
+
+    /**
+     * Desloga o usuário a partir da tela de bloqueio.
+     * Limpa a sessão de lock antes de deslogar.
+     */
+    public function lockLogout(Request $request): RedirectResponse
+    {
+        $request->session()->forget('screen_locked');
+        $request->session()->forget('lock_user_id');
+
+        Auth::logout();
+
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return redirect()->route('login');
     }
 
     /**

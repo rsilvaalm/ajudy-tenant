@@ -10,64 +10,60 @@ use Illuminate\View\View;
 
 class PublicacoesConfigController extends Controller
 {
-    /**
-     * Página de configurações de publicações do tenant.
-     */
     public function index(): View
     {
-        // Usa $currentTenant compartilhado pelo InitializeTenancy
         $currentTenant = view()->shared('currentTenant');
 
-        $enabled      = (bool)(int)($currentTenant->publicacoes_enabled      ?? 0);
-        $limiteMensal = (int)($currentTenant->publicacoes_limite_mensal ?? 0);
+        // Controle do landlord
+        $landlordEnabled = (bool)(int)($currentTenant->landlord_publicacoes_enabled ?? 0);
+        $landlordLimite  = (int)($currentTenant->landlord_limite_mensal ?? 0);
 
-        // Consumo do mês atual (banco do tenant)
-        $usage = $this->getMonthlyUsage($limiteMensal);
+        // Config local do tenant
+        $config = DB::table('publicacoes_config')->first();
+        $enabled      = $landlordEnabled && (bool)(int)($config->enabled ?? 0);
+        $limiteMensal = (int)($config->limite_mensal ?? 0);
 
-        // Histórico dos últimos 6 meses
+        // Limite efetivo
+        $limiteEfetivo = 0;
+        if ($landlordLimite > 0 && $limiteMensal > 0) {
+            $limiteEfetivo = min($limiteMensal, $landlordLimite);
+        } elseif ($landlordLimite > 0) {
+            $limiteEfetivo = $landlordLimite;
+        } elseif ($limiteMensal > 0) {
+            $limiteEfetivo = $limiteMensal;
+        }
+
+        $usage   = $this->getMonthlyUsage($limiteEfetivo);
         $history = $this->getHistory();
 
         return view('pages.publicacoes.config', compact(
-            'enabled', 'limiteMensal', 'usage', 'history'
+            'landlordEnabled', 'landlordLimite',
+            'enabled', 'limiteMensal', 'limiteEfetivo',
+            'usage', 'history'
         ));
     }
 
     /**
-     * Liga/desliga publicações pelo tenant.
+     * Toggle do tenant (liga/desliga local).
+     * Só funciona se landlord habilitou.
      */
     public function toggle(Request $request): RedirectResponse
     {
-        // Usa $currentTenant compartilhado pelo InitializeTenancy
-        $currentTenant = view()->shared('currentTenant');
+        $currentTenant   = view()->shared('currentTenant');
+        $landlordEnabled = (bool)(int)($currentTenant->landlord_publicacoes_enabled ?? 0);
 
-        if (!$currentTenant) {
-            return back()->with('error', 'Tenant não identificado.');
+        if (!$landlordEnabled) {
+            return back()->with('error', 'Esta funcionalidade não está disponível no seu plano.');
         }
 
-        $tenantId = $currentTenant->id;
+        $config  = DB::table('publicacoes_config')->first();
+        $current = (bool)(int)($config->enabled ?? 0);
 
-        // Verifica se tem token configurado
-        $tenantData = DB::connection('landlord')
-            ->table('tenants')
-            ->where('id', $tenantId)
-            ->first(['publicacoes_enabled', 'escavador_api_key']);
+        DB::table('publicacoes_config')->updateOrInsert(
+            ['id' => $config?->id ?? null],
+            ['enabled' => !$current, 'updated_at' => now()]
+        );
 
-        if (empty($tenantData->escavador_api_key)) {
-            return back()->with('error', 'Este recurso não está disponível. Contate o suporte para configurar o acesso.');
-        }
-
-        $current = (bool)(int)($tenantData->publicacoes_enabled ?? 0);
-
-        DB::connection('landlord')
-            ->table('tenants')
-            ->where('id', $tenantId)
-            ->update(['publicacoes_enabled' => !$current]);
-
-        // Invalida o cache do InitializeTenancy para este host
-        $host = $request->getHost();
-        \Illuminate\Support\Facades\Cache::forget("tenant_connection:{$host}");
-
-        // Limpa o bind do ViewServiceProvider para reexecutar no próximo request
         app()->forgetInstance('tenancy_customization_composed');
 
         $msg = !$current ? 'Publicações habilitadas!' : 'Publicações desabilitadas.';
@@ -75,20 +71,55 @@ class PublicacoesConfigController extends Controller
     }
 
     /**
-     * Retorna dados de consumo via JSON (para atualização sem reload).
+     * Salva o limite mensal definido pelo tenant.
+     * Não pode ultrapassar o limite do landlord.
      */
-    public function usage(): JsonResponse
+    public function saveLimite(Request $request): RedirectResponse
     {
-        $currentTenant = view()->shared('currentTenant');
-        $limiteMensal  = (int)($currentTenant->publicacoes_limite_mensal ?? 0);
+        $currentTenant  = view()->shared('currentTenant');
+        $landlordLimite = (int)($currentTenant->landlord_limite_mensal ?? 0);
 
-        return response()->json($this->getMonthlyUsage($limiteMensal));
+        $request->validate([
+            'limite_mensal' => 'required|integer|min:0',
+        ]);
+
+        $limite = (int) $request->input('limite_mensal');
+
+        // Garante que não ultrapassa o limite do landlord
+        if ($landlordLimite > 0 && $limite > $landlordLimite) {
+            return back()->with('error', "O limite não pode ultrapassar {$landlordLimite} créditos (definido pelo plano).");
+        }
+
+        DB::table('publicacoes_config')->updateOrInsert(
+            [],
+            ['limite_mensal' => $limite, 'updated_at' => now()]
+        );
+
+        app()->forgetInstance('tenancy_customization_composed');
+
+        return back()->with('success', 'Limite atualizado com sucesso!');
     }
 
-    /**
-     * Consumo do mês atual.
-     */
-    private function getMonthlyUsage(int $limit): array
+    public function usage(): JsonResponse
+    {
+        $currentTenant  = view()->shared('currentTenant');
+        $landlordLimite = (int)($currentTenant->landlord_limite_mensal ?? 0);
+        $config         = DB::table('publicacoes_config')->first();
+        $tenantLimite   = (int)($config->limite_mensal ?? 0);
+
+        $limiteEfetivo = 0;
+        if ($landlordLimite > 0 && $tenantLimite > 0) {
+            $limiteEfetivo = min($tenantLimite, $landlordLimite);
+        } elseif ($landlordLimite > 0) {
+            $limiteEfetivo = $landlordLimite;
+        } elseif ($tenantLimite > 0) {
+            $limiteEfetivo = $tenantLimite;
+        }
+
+        return response()->json($this->getMonthlyUsage($limiteEfetivo));
+    }
+
+    private function getMonthlyUsage(int $limite): array
     {
         $start = now()->startOfMonth();
         $end   = now()->endOfMonth();
@@ -107,24 +138,21 @@ class PublicacoesConfigController extends Controller
             $queries = null;
         }
 
-        $totalCredits = (int) ($queries->total_credits ?? 0);
+        $totalCredits = (int)($queries->total_credits ?? 0);
 
         return [
-            'total_queries'  => (int) ($queries->total_queries  ?? 0),
-            'total_credits'  => $totalCredits,
-            'total_results'  => (int) ($queries->total_results  ?? 0),
-            'total_errors'   => (int) ($queries->total_errors   ?? 0),
-            'limit'          => $limit,
-            'limit_percent'  => $limit > 0 ? min(round(($totalCredits / $limit) * 100), 100) : 0,
-            'limit_remaining'=> $limit > 0 ? max($limit - $totalCredits, 0) : null,
-            'month'          => now()->format('m/Y'),
-            'month_label'    => ucfirst(now()->translatedFormat('F \d\e Y')),
+            'total_queries'   => (int)($queries->total_queries ?? 0),
+            'total_credits'   => $totalCredits,
+            'total_results'   => (int)($queries->total_results ?? 0),
+            'total_errors'    => (int)($queries->total_errors ?? 0),
+            'limit'           => $limite,
+            'limit_percent'   => $limite > 0 ? min(round(($totalCredits / $limite) * 100), 100) : 0,
+            'limit_remaining' => $limite > 0 ? max($limite - $totalCredits, 0) : null,
+            'month'           => now()->format('m/Y'),
+            'month_label'     => ucfirst(now()->translatedFormat('F \d\e Y')),
         ];
     }
 
-    /**
-     * Histórico dos últimos 6 meses agrupado por mês.
-     */
     private function getHistory(): array
     {
         try {

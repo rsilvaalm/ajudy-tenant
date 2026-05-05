@@ -11,12 +11,12 @@ class HandleLockScreen
 {
     public function handle(Request $request, Closure $next): Response
     {
-        // Se a tela está bloqueada e não está na rota de lock, redireciona
         if (
             Auth::check() &&
             $request->session()->get('screen_locked') &&
             !$request->routeIs('lock') &&
-            !$request->routeIs('lock.unlock')
+            !$request->routeIs('lock.unlock') &&
+            !$request->routeIs('lock.logout')
         ) {
             return redirect()->route('lock');
         }

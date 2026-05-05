@@ -65,16 +65,21 @@
                     <span id="badge-movimentacoes" class="badge bg-secondary-subtle text-secondary ms-1" style="display:none;"></span>
                 </a>
             </li>
-            @if(!empty($currentTenant->publicacoes_enabled))
-            <li class="nav-item" role="presentation" id="tab-publicacoes-nav">
+            <li class="nav-item" role="presentation">
                 <a class="nav-link py-3 text-muted" data-bs-toggle="tab" href="#tab-publicacoes" role="tab"
                    id="tab-publicacoes-btn" data-anchor="publicacoes">
                     <i class="ri-newspaper-line me-1"></i>
                     <span class="d-none d-sm-inline">Publicações</span>
                     <span id="badge-publicacoes" class="badge bg-info-subtle text-info ms-1" style="display:none;"></span>
+                    @if(empty($publicacoesEnabled) && empty($publicacoesBloqueadas))
+                        {{-- landlord habilitou mas tenant desabilitou --}}
+                    @elseif(!empty($publicacoesBloqueadas))
+                        <span class="badge bg-warning-subtle text-warning ms-1 fs-10">
+                            <i class="ri-lock-line"></i>
+                        </span>
+                    @endif
                 </a>
             </li>
-            @endif
             <li class="nav-item" role="presentation">
                 <a class="nav-link py-3 text-muted" data-bs-toggle="tab" href="#tab-despesas" role="tab"
                    data-anchor="despesas">
@@ -188,8 +193,49 @@
             </div>
         </div>
 
-        @if(!empty($currentTenant->publicacoes_enabled))
         <div class="tab-pane" id="tab-publicacoes" role="tabpanel">
+            @if(!empty($publicacoesBloqueadas))
+
+            {{-- Upsell --}}
+            <div class="text-center py-5">
+                <div class="avatar-lg mx-auto mb-3">
+                    <div class="avatar-title rounded-circle fs-30"
+                         style="background:rgba(var(--brand-primary-rgb,26,60,94),.08);color:var(--brand-primary,#1a3c5e);">
+                        <i class="ri-lock-line"></i>
+                    </div>
+                </div>
+                <h6 class="fw-bold mb-2">Funcionalidade disponível no plano avançado</h6>
+                <p class="text-muted fs-13 mb-3 mx-auto" style="max-width:420px;">
+                    Com o monitoramento de publicações você acompanha automaticamente
+                    as publicações do DJe diretamente aqui, sem precisar acessar os portais dos tribunais.
+                </p>
+                <a href="mailto:contato@ajudy.com.br?subject=Quero contratar Publicações"
+                   class="btn btn-primary btn-sm px-4">
+                    <i class="ri-mail-send-line me-1"></i> Solicitar ativação
+                </a>
+            </div>
+
+            @elseif(empty($publicacoesEnabled))
+
+            {{-- Habilitado pelo landlord mas desligado pelo tenant --}}
+            <div class="text-center py-5">
+                <div class="avatar-lg mx-auto mb-3">
+                    <div class="avatar-title rounded-circle bg-light text-muted fs-30">
+                        <i class="ri-newspaper-line"></i>
+                    </div>
+                </div>
+                <h6 class="fw-semibold mb-2 text-muted">Publicações desabilitadas</h6>
+                <p class="text-muted fs-13 mb-3">
+                    Habilite o monitoramento de publicações nas configurações.
+                </p>
+                <a href="{{ route('publicacoes.config.index') }}" class="btn btn-sm btn-outline-primary">
+                    <i class="ri-settings-line me-1"></i> Ir para configurações
+                </a>
+            </div>
+
+            @else
+
+            {{-- Ativo --}}
             <div class="d-flex align-items-center justify-content-between mb-4">
                 <div>
                     <h6 class="fw-semibold mb-0">Publicações</h6>
@@ -218,8 +264,9 @@
                     <small>Clique em <strong>Buscar publicações</strong> para consultar o Escavador.</small>
                 </div>
             </div>
+
+            @endif
         </div>
-        @endif
 
         <div class="tab-pane" id="tab-despesas" role="tabpanel">
             <div class="text-center text-muted py-5">
@@ -1191,22 +1238,20 @@ function renderMovements(movements, processData) {
 // ════════════════════════════════════════════════════════════════════════════
 // ABA PUBLICAÇÕES (Escavador)
 // ════════════════════════════════════════════════════════════════════════════
-var PUBLICACOES_ENABLED = {{ !empty($currentTenant->publicacoes_enabled) ? 'true' : 'false' }};
+var PUBLICACOES_ENABLED = {{ !empty($publicacoesEnabled) ? 'true' : 'false' }};
 
-document.addEventListener('DOMContentLoaded', function () {
-    // Exibe ou oculta a aba conforme permissão do tenant
-    if (PUBLICACOES_ENABLED) {
-        document.getElementById('tab-publicacoes-nav').style.display = '';
-    }
-});
+// Aba de publicações sempre visível — conteúdo controlado pelo Blade
 
 document.getElementById('tab-publicacoes-btn').addEventListener('shown.bs.tab', function () {
-    loadPublications(false);
+    if (PUBLICACOES_ENABLED) loadPublications(false);
 });
 
-document.getElementById('btn-sync-publicacoes').addEventListener('click', function () {
-    syncPublications();
-});
+var btnSync = document.getElementById('btn-sync-publicacoes');
+if (btnSync) {
+    btnSync.addEventListener('click', function () {
+        syncPublications();
+    });
+}
 
 function syncPublications() {
     var btn  = document.getElementById('btn-sync-publicacoes');
