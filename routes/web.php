@@ -12,6 +12,8 @@ use App\Http\Controllers\FolderController;
 use App\Http\Controllers\ProcessController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProfileUserController;
+use App\Http\Controllers\ScheduleController;
+use App\Http\Controllers\ScheduleTypeController;
 use App\Http\Controllers\UserController;
 use App\Http\Middleware\CheckModuleAccess;
 use App\Http\Middleware\HandleLockScreen;
@@ -72,7 +74,7 @@ Route::middleware(['web', InitializeTenancy::class])->group(function () {
                 Route::patch('usuarios/{id}/toggle', [UserController::class, 'toggleActive'])->name('usuarios.toggle');
             });
 
-            // Clientes + Processos
+            // Clientes + Processos + Agendamentos
             Route::middleware(CheckModuleAccess::class . ':clientes')->group(function () {
 
                 // Campos personalizados
@@ -91,7 +93,7 @@ Route::middleware(['web', InitializeTenancy::class])->group(function () {
                 Route::put('clientes/{client}',        [ClientController::class, 'update'])->name('clientes.update');
                 Route::delete('clientes/{client}',     [ClientController::class, 'destroy'])->name('clientes.destroy');
 
-                // Pastas — JSON deve vir antes das rotas com parâmetro
+                // Pastas
                 Route::get('processos/pastas-json',    [FolderController::class, 'json'])->name('processos.pastas.json');
                 Route::get('processos/pastas',         [FolderController::class, 'index'])->name('processos.pastas.index');
                 Route::post('processos/pastas',        [FolderController::class, 'store'])->name('processos.pastas.store');
@@ -107,6 +109,21 @@ Route::middleware(['web', InitializeTenancy::class])->group(function () {
                 Route::get('processos/{id}/editar',  [ProcessController::class, 'edit'])->name('processos.edit');
                 Route::put('processos/{id}',         [ProcessController::class, 'update'])->name('processos.update');
                 Route::delete('processos/{id}',      [ProcessController::class, 'destroy'])->name('processos.destroy');
+
+                // Tipos de agendamento
+                Route::get('agendamentos/tipos-json',    [ScheduleTypeController::class, 'json'])->name('agendamentos.tipos.json');
+                Route::get('agendamentos/tipos',         [ScheduleTypeController::class, 'index'])->name('agendamentos.tipos.index');
+                Route::post('agendamentos/tipos',        [ScheduleTypeController::class, 'store'])->name('agendamentos.tipos.store');
+                Route::put('agendamentos/tipos/{id}',    [ScheduleTypeController::class, 'update'])->name('agendamentos.tipos.update');
+                Route::delete('agendamentos/tipos/{id}', [ScheduleTypeController::class, 'destroy'])->name('agendamentos.tipos.destroy');
+
+                // Agendamentos
+                Route::get('agendamentos/processo/{processId}', [ScheduleController::class, 'byProcess'])->name('agendamentos.byProcess');
+                Route::get('agendamentos/buscar-usuarios',      [ScheduleController::class, 'searchUsers'])->name('agendamentos.searchUsers');
+                Route::post('agendamentos',                     [ScheduleController::class, 'store'])->name('agendamentos.store');
+                Route::patch('agendamentos/{id}/concluir',      [ScheduleController::class, 'complete'])->name('agendamentos.complete');
+                Route::patch('agendamentos/{id}/reabrir',       [ScheduleController::class, 'reopen'])->name('agendamentos.reopen');
+                Route::delete('agendamentos/{id}',              [ScheduleController::class, 'destroy'])->name('agendamentos.destroy');
             });
 
         });

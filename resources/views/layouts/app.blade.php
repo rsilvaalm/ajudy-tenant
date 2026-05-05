@@ -33,6 +33,7 @@
         $configItems = [];
         if ($hasClientes)  $configItems[] = 'campos_personalizados';
         if ($hasProcessos) $configItems[] = 'pastas';
+        if ($hasProcessos) $configItems[] = 'tipos_agendamento';
     @endphp
     <style>
         :root { --brand-primary:{{ $primary }};--brand-secondary:{{ $secondary }};--brand-tertiary:{{ $tertiary }}; }
@@ -256,6 +257,13 @@
                             <li class="nav-item">
                                 <a href="{{ route('processos.pastas.index') }}" class="nav-link {{ request()->routeIs('processos.pastas.*') ? 'active' : '' }}">
                                     <i class="ri-folder-settings-line me-1"></i> Pastas
+                                </a>
+                            </li>
+                            @endif
+                            @if(in_array('tipos_agendamento', $configItems) && Route::has('agendamentos.tipos.index'))
+                            <li class="nav-item">
+                                <a href="{{ route('agendamentos.tipos.index') }}" class="nav-link {{ request()->routeIs('agendamentos.tipos.*') ? 'active' : '' }}">
+                                    <i class="ri-calendar-check-line me-1"></i> Tipos de agendamento
                                 </a>
                             </li>
                             @endif
