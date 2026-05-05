@@ -1,11 +1,15 @@
 <?php
 
+use App\Http\Controllers\AttendanceController;
+use App\Http\Controllers\AttendanceListController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\LockScreenController;
 use App\Http\Controllers\Auth\SetPasswordController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\CustomFieldController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\FolderController;
+use App\Http\Controllers\ProcessController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProfileUserController;
 use App\Http\Controllers\UserController;
@@ -16,40 +20,42 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware(['web', InitializeTenancy::class])->group(function () {
 
-    // ── Autenticação ──────────────────────────────────────────────────────
     Route::middleware('guest')->group(function () {
         Route::get('login',  [AuthenticatedSessionController::class, 'create'])->name('login');
         Route::post('login', [AuthenticatedSessionController::class, 'store'])->name('login.store');
-
         Route::get('cadastrar-senha',  [SetPasswordController::class, 'show'])->name('set-password.show');
         Route::post('cadastrar-senha', [SetPasswordController::class, 'store'])->name('set-password.store');
     });
 
-    // ── Rotas autenticadas ────────────────────────────────────────────────
     Route::middleware('auth')->group(function () {
 
         Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
-
-        // ── Lock screen ───────────────────────────────────────────────────
         Route::get('lock',           [LockScreenController::class, 'show'])->name('lock');
         Route::post('lock',          [LockScreenController::class, 'unlock'])->name('lock.unlock');
         Route::post('lock/activate', [LockScreenController::class, 'lock'])->name('lock.activate');
 
-        // ── Rotas protegidas ──────────────────────────────────────────────
         Route::middleware(HandleLockScreen::class)->group(function () {
 
-            // Dashboard
             Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 
-            // ── Perfil do usuário logado ───────────────────────────────────
             Route::get('perfil',         [ProfileUserController::class, 'show'])->name('perfil.show');
             Route::put('perfil',         [ProfileUserController::class, 'update'])->name('perfil.update');
             Route::patch('perfil/senha', [ProfileUserController::class, 'updatePassword'])->name('perfil.password');
 
-            // ── Gestão de Usuários ─────────────────────────────────────────
-            Route::middleware(CheckModuleAccess::class . ':gestao-de-usuarios')
-                ->group(function () {
+            // Atendimento rápido
+            Route::get('atendimento/atual',           [AttendanceController::class, 'current'])->name('atendimento.current');
+            Route::get('atendimento/buscar-clientes', [AttendanceController::class, 'searchClients'])->name('atendimento.search');
+            Route::post('atendimento',                [AttendanceController::class, 'store'])->name('atendimento.store');
+            Route::patch('atendimento/{id}/encerrar', [AttendanceController::class, 'close'])->name('atendimento.close');
 
+            // Listagem de atendimentos
+            Route::get('atendimentos',                    [AttendanceListController::class, 'index'])->name('atendimentos.index');
+            Route::get('atendimentos/cliente/{clientId}', [AttendanceListController::class, 'byClient'])->name('atendimentos.byClient');
+            Route::get('atendimentos/{id}',               [AttendanceListController::class, 'show'])->name('atendimentos.show');
+            Route::delete('atendimentos/{id}',            [AttendanceListController::class, 'destroy'])->name('atendimentos.destroy');
+
+            // Gestão de Usuários
+            Route::middleware(CheckModuleAccess::class . ':gestao-de-usuarios')->group(function () {
                 Route::get('perfis',             [ProfileController::class, 'index'])->name('perfis.index');
                 Route::get('perfis/criar',       [ProfileController::class, 'create'])->name('perfis.create');
                 Route::post('perfis',            [ProfileController::class, 'store'])->name('perfis.store');
@@ -66,29 +72,43 @@ Route::middleware(['web', InitializeTenancy::class])->group(function () {
                 Route::patch('usuarios/{id}/toggle', [UserController::class, 'toggleActive'])->name('usuarios.toggle');
             });
 
-            // ── Clientes ───────────────────────────────────────────────────
-            Route::middleware(CheckModuleAccess::class . ':clientes')
-                ->group(function () {
+            // Clientes + Processos
+            Route::middleware(CheckModuleAccess::class . ':clientes')->group(function () {
 
-                // Campos personalizados (antes das rotas com parâmetro)
-                Route::get('clientes/campos',              [CustomFieldController::class, 'index'])->name('clientes.campos.index');
-                Route::post('clientes/campos',             [CustomFieldController::class, 'store'])->name('clientes.campos.store');
-                Route::put('clientes/campos/{id}',         [CustomFieldController::class, 'update'])->name('clientes.campos.update');
-                Route::patch('clientes/campos/{id}/toggle',[CustomFieldController::class, 'toggleActive'])->name('clientes.campos.toggle');
-                Route::delete('clientes/campos/{id}',      [CustomFieldController::class, 'destroy'])->name('clientes.campos.destroy');
+                // Campos personalizados
+                Route::get('clientes/campos',               [CustomFieldController::class, 'index'])->name('clientes.campos.index');
+                Route::post('clientes/campos',              [CustomFieldController::class, 'store'])->name('clientes.campos.store');
+                Route::put('clientes/campos/{id}',          [CustomFieldController::class, 'update'])->name('clientes.campos.update');
+                Route::patch('clientes/campos/{id}/toggle', [CustomFieldController::class, 'toggleActive'])->name('clientes.campos.toggle');
+                Route::delete('clientes/campos/{id}',       [CustomFieldController::class, 'destroy'])->name('clientes.campos.destroy');
 
-                // CRUD de clientes
-                Route::get('clientes',             [ClientController::class, 'index'])->name('clientes.index');
-                Route::get('clientes/novo',        [ClientController::class, 'create'])->name('clientes.create');
-                Route::post('clientes',            [ClientController::class, 'store'])->name('clientes.store');
-                Route::get('clientes/{client}',    [ClientController::class, 'show'])->name('clientes.show');
+                // CRUD Clientes
+                Route::get('clientes',                 [ClientController::class, 'index'])->name('clientes.index');
+                Route::get('clientes/novo',            [ClientController::class, 'create'])->name('clientes.create');
+                Route::post('clientes',                [ClientController::class, 'store'])->name('clientes.store');
+                Route::get('clientes/{client}',        [ClientController::class, 'show'])->name('clientes.show');
                 Route::get('clientes/{client}/editar', [ClientController::class, 'edit'])->name('clientes.edit');
-                Route::put('clientes/{client}',    [ClientController::class, 'update'])->name('clientes.update');
-                Route::delete('clientes/{client}', [ClientController::class, 'destroy'])->name('clientes.destroy');
+                Route::put('clientes/{client}',        [ClientController::class, 'update'])->name('clientes.update');
+                Route::delete('clientes/{client}',     [ClientController::class, 'destroy'])->name('clientes.destroy');
+
+                // Pastas — JSON deve vir antes das rotas com parâmetro
+                Route::get('processos/pastas-json',    [FolderController::class, 'json'])->name('processos.pastas.json');
+                Route::get('processos/pastas',         [FolderController::class, 'index'])->name('processos.pastas.index');
+                Route::post('processos/pastas',        [FolderController::class, 'store'])->name('processos.pastas.store');
+                Route::put('processos/pastas/{id}',    [FolderController::class, 'update'])->name('processos.pastas.update');
+                Route::delete('processos/pastas/{id}', [FolderController::class, 'destroy'])->name('processos.pastas.destroy');
+
+                // Processos — estáticas antes das dinâmicas
+                Route::get('processos/novo',         [ProcessController::class, 'create'])->name('processos.create');
+                Route::get('processos/buscar',       [ProcessController::class, 'search'])->name('processos.buscar');
+                Route::get('processos/cliente/{id}', [ProcessController::class, 'byClient'])->name('processos.byClient');
+                Route::post('processos',             [ProcessController::class, 'store'])->name('processos.store');
+                Route::get('processos/{id}',         [ProcessController::class, 'show'])->name('processos.show');
+                Route::get('processos/{id}/editar',  [ProcessController::class, 'edit'])->name('processos.edit');
+                Route::put('processos/{id}',         [ProcessController::class, 'update'])->name('processos.update');
+                Route::delete('processos/{id}',      [ProcessController::class, 'destroy'])->name('processos.destroy');
             });
 
         });
-
     });
-
 });
